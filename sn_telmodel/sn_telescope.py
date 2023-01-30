@@ -1,7 +1,6 @@
-from rubin_sim.phot_utils import signaltonoise
 from rubin_sim.phot_utils import photometric_parameters
 from rubin_sim.phot_utils import Bandpass, Sed
-from sn_tools.sn_throughputs import Throughputs
+from sn_telmodel.sn_throughputs import Throughputs
 
 import numpy as np
 # import matplotlib.pyplot as plt
@@ -132,6 +131,7 @@ class Telescope(Throughputs):
 
         if self.atmos:
             trans = self.atmosphere[band]
+        from rubin_sim.phot_utils import signaltonoise
         self.data['m5'][band] = signaltonoise.calcM5(
             flatSedb, trans, filter_trans,
             photParams=photParams,
