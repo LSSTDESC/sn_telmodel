@@ -138,8 +138,13 @@ class Telescope(Throughputs):
         flatSedb.multiply_flux_norm(flux0b)
         photParams = photometric_parameters.PhotometricParameters(
             bandpass=band)
-        norm = photParams.platescale**2/photParams.exptime
         trans = filter_trans
+        adu_int = flatSedb.calc_adu(bandpass=trans, phot_params=photParams)
+
+        vv = adu_int
+        vv *= photParams.platescale**2*photParams.gain
+        vv /= (photParams.exptime*photParams.nexp)
+        self.data['flux_sky'][band] = vv
 
         if self.atmos:
             trans = self.atmosphere[band]
@@ -150,12 +155,6 @@ class Telescope(Throughputs):
             flatSedb, trans, filter_trans,
             phot_params=photParams,
             fwhm_eff=self.FWHMeff(band))
-        adu_int = flatSedb.calc_adu(bandpass=trans, phot_params=photParams)
-
-        vv = adu_int
-        vv *= photParams.platescale**2
-        vv /= (photParams.gain*photParams.exptime*photParams.nexp)
-        self.data['flux_sky'][band] = vv
 
     @ get_val_decor
     def get_inputs(self, what, band):
