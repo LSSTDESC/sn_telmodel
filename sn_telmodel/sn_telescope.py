@@ -20,6 +20,15 @@ def get_val_decor(func):
     return func_deco
 
 
+def get_val_decorb(func):
+    @wraps(func)
+    def func_decob(theclass, what, xlist, y):
+        for x in xlist:
+            if x not in theclass.data[what].keys():
+                func(theclass, what, x, y)
+    return func_decob
+
+
 class Telescope(Throughputs):
     """ Telescope class
     inherits from Throughputs
@@ -97,12 +106,15 @@ class Telescope(Throughputs):
         self.data['FWHMeff'] = dict(
             zip('ugrizy', [0.92, 0.87, 0.83, 0.80, 0.78, 0.76]))
 
+        self.data['FWHMeff'] = dict(
+            zip('ugrizy', [0.77, 0.73, 0.70, 0.67, 0.65, 0.63]))
+
         # self.atmos = atmos
 
         self.Load_Atmosphere(airmass)
 
-    @get_val_decor
-    def get(self, what, band):
+    @get_val_decorb
+    def get(self, what, band, exptime):
         """
         Decorator to access quantities
 
@@ -121,25 +133,31 @@ class Telescope(Throughputs):
         # bpass = Bandpass(wavelen=filter_trans.wavelen, sb=filter_trans.sb)
 
         flatSedb = Sed()
-        flatSedb.setFlatSED(wavelen_min, wavelen_max, wavelen_step)
+        flatSedb.set_flat_sed(wavelen_min, wavelen_max, wavelen_step)
         flux0b = np.power(10., -0.4*self.mag_sky(band))
         flatSedb.multiply_flux_norm(flux0b)
         photParams = photometric_parameters.PhotometricParameters(
             bandpass=band)
-        norm = photParams.platescale**2/2.*photParams.exptime/photParams.gain
+        norm = photParams.platescale**2/photParams.exptime
         trans = filter_trans
 
         if self.atmos:
             trans = self.atmosphere[band]
         from rubin_sim.phot_utils import signaltonoise
-        self.data['m5'][band] = signaltonoise.calcM5(
+        photParams._exptime = exptime
+        photParams._nexp = 1
+        self.data['m5'][band] = signaltonoise.calc_m5(
             flatSedb, trans, filter_trans,
-            photParams=photParams,
-            FWHMeff=self.FWHMeff(band))
+            phot_params=photParams,
+            fwhm_eff=self.FWHMeff(band))
         adu_int = flatSedb.calc_adu(bandpass=trans, phot_params=photParams)
-        self.data['flux_sky'][band] = adu_int*norm
 
-    @get_val_decor
+        vv = adu_int
+        vv *= photParams.platescale**2
+        vv /= (photParams.gain*photParams.exptime*photParams.nexp)
+        self.data['flux_sky'][band] = vv
+
+    @ get_val_decor
     def get_inputs(self, what, band):
         """
         decorator to access Tb, Sigmab, mag_sky
@@ -158,10 +176,10 @@ class Telescope(Throughputs):
             bpass = self.aerosol[band]
         self.data['Tb'][band] = self.Calc_Integ(bpass)
         self.data['Sigmab'][band] = self.Calc_Integ(self.system[band])
-        self.data['mag_sky'][band] = -2.5 * \
-            np.log10(myup/(3631.*self.Sigmab(band)))
+        tt = np.log10(myup/(3631.*self.Sigmab(band)))
+        self.data['mag_sky'][band] = -2.5 * tt
 
-    @get_val_decor
+    @ get_val_decor
     def get_zp(self, what, band):
         """
         decorator get zero points
@@ -197,8 +215,8 @@ class Telescope(Throughputs):
             filtre_trans.get_wavelen_limits(None, None, None)
         """
         filtre_trans = self.lsst_system[band]
-        wavelen_min, wavelen_max, wavelen_step = \
-            filtre_trans.get_wavelen_limits(None, None, None)
+        wavelen_min, wavelen_max, wavelen_step = filtre_trans.get_wavelen_limits(
+            None, None, None)
         bpass = Bandpass(wavelen=filtre_trans.wavelen, sb=filtre_trans.sb)
         flatSed = Sed()
         flatSed.set_flat_sed(wavelen_min, wavelen_max, wavelen_step)
@@ -228,10 +246,10 @@ class Telescope(Throughputs):
         else:
             return self.data[what][band]
 
-    def m5(self, filtre):
+    def m5(self, filtre, exptime):
         """m5 accessor
         """
-        self.get('m5', filtre)
+        self.get('m5', filtre, exptime)
         return self.return_value('m5', filtre)
 
     def Tb(self, filtre):
@@ -245,6 +263,13 @@ class Telescope(Throughputs):
         """
         self.get_inputs('mag_sky', filtre)
         return self.return_value('mag_sky', filtre)
+
+    def flux_sky(self, filtre, exptime):
+        """flux_sky accessor
+        """
+
+        self.get('flux_sky', filtre, exptime)
+        return self.return_value('flux_sky', filtre)
 
     def Sigmab(self, filtre):
         """
@@ -451,18 +476,16 @@ class Telescope(Throughputs):
 
         """
         if not hasattr(mag, '__iter__'):
-            wavelen_min, wavelen_max, wavelen_step = \
-                self.atmosphere[band].get_avelen_limits(
-                    None, None, None)
+            wavelen_min, wavelen_max, wavelen_step = self.atmosphere[band].get_avelen_limits(
+                None, None, None)
             sed = Sed()
-            sed.setFlatSED()
+            sed.set_flat_sed()
 
             flux0 = sed.calcFluxNorm(mag, self.atmosphere[band])
             sed.multiply_flux_norm(flux0)
 
-            photParams = \
-                photometric_parameters.PhotometricParameters(
-                    exptime=exptime, nexp=nexp)
+            photParams = photometric_parameters.PhotometricParameters(
+                exptime=exptime, nexp=nexp)
 
             counts = sed.calc_adu(
                 bandpass=self.atmosphere[band], phot_params=photParams)
@@ -506,9 +529,8 @@ class Telescope(Throughputs):
         """
 
         if not hasattr(mag, '__iter__'):
-            photParams = \
-                photometric_parameters.PhotometricParameters(
-                    nexp=nexp, exptime=exptime)
+            photParams = photometric_parameters.PhotometricParameters(
+                nexp=nexp, exptime=exptime)
             counts, e_per_sec = self.mag_to_flux_e_sec(
                 mag, band, exptime, nexp)
             gamma = 0.04-1./(photParams.gain*counts)
