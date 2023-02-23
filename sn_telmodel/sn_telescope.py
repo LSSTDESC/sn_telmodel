@@ -106,8 +106,8 @@ class Telescope(Throughputs):
         self.data['FWHMeff'] = dict(
             zip('ugrizy', [0.92, 0.87, 0.83, 0.80, 0.78, 0.76]))
 
-        self.data['FWHMeff'] = dict(
-            zip('ugrizy', [0.77, 0.73, 0.70, 0.67, 0.65, 0.63]))
+        # self.data['FWHMeff'] = dict(
+        #    zip('ugrizy', [0.77, 0.73, 0.70, 0.67, 0.65, 0.63]))
 
         # self.atmos = atmos
 
@@ -127,14 +127,16 @@ class Telescope(Throughputs):
 
         """
         filter_trans = self.system[band]
+        # filter_trans = self.lsst_atmos_aerosol[band]
         wavelen_min, wavelen_max, wavelen_step = \
             filter_trans.get_wavelen_limits(None, None, None)
 
         # bpass = Bandpass(wavelen=filter_trans.wavelen, sb=filter_trans.sb)
-
+        """
         flatSedb = Sed()
         flatSedb.set_flat_sed(wavelen_min, wavelen_max, wavelen_step)
-        flux0b = np.power(10., -0.4*self.mag_sky(band))
+        flux0b = 10.**(-0.4*(self.mag_sky(band)))
+        flux0b = flatSedb.calc_flux_norm(self.mag_sky(band), filter_trans)
         flatSedb.multiply_flux_norm(flux0b)
         photParams = photometric_parameters.PhotometricParameters(
             bandpass=band)
@@ -143,14 +145,35 @@ class Telescope(Throughputs):
 
         vv = adu_int
         vv *= photParams.platescale**2*photParams.gain
-        vv /= (photParams.exptime*photParams.nexp)
+        vv /= (photParams.exptime)
+        """
+        photParams = photometric_parameters.PhotometricParameters(
+            bandpass=band)
+        photParams._exptime = exptime
+        photParams._nexp = 1
+        exptime = photParams.exptime
+        nexp = photParams.nexp
+        vv = self.mag_to_flux_e_sec(self.mag_sky(band), band, exptime, nexp)
+        vv = vv[1]*photParams.platescale**2
+        vvb = 10**(-0.4*(self.mag_sky(band)-self.zp(band)))
+        vvb *= photParams.platescale**2
+
+        print(vv, vvb)
         self.data['flux_sky'][band] = vv
 
         if self.atmos:
             trans = self.atmosphere[band]
+
         from rubin_sim.phot_utils import signaltonoise
-        photParams._exptime = exptime
-        photParams._nexp = 1
+        nexp = exptime/30
+        photParams._nexp = nexp
+        photParams._exptime = exptime/nexp
+
+        flatSedb = Sed()
+        flatSedb.set_flat_sed(wavelen_min, wavelen_max, wavelen_step)
+        flux0b = flatSedb.calc_flux_norm(self.mag_sky(band), filter_trans)
+        flatSedb.multiply_flux_norm(flux0b)
+
         self.data['m5'][band] = signaltonoise.calc_m5(
             flatSedb, trans, filter_trans,
             phot_params=photParams,
@@ -192,19 +215,22 @@ class Telescope(Throughputs):
         """
         photParams = photometric_parameters.PhotometricParameters(
             bandpass=band)
+        photParams._exptime = 30
+        photParams._nexp = 1
         Diameter = 2.*np.sqrt(photParams.effarea*1.e-4 /
                               np.pi)  # diameter in meter
-        Cte = 3631.*np.pi*Diameter**2*2.*photParams.exptime/4/h/1.e36
+        Cte = 3631.*np.pi*Diameter**2*photParams.exptime/4/h/1.e36
 
         self.data['Skyb'][band] = Cte*np.power(Diameter/6.5, 2.)\
-            * np.power(2.*photParams.exptime/30., 2.)\
+            * np.power(photParams.exptime/30., 1.)\
             * np.power(photParams.platescale, 2.)\
             * 10.**0.4*(25.-self.mag_sky(band))\
             * self.Sigmab(band)
 
         Zb = 181.8*np.power(Diameter/6.5, 2.)*self.Tb(band)
         mbZ = 25.+2.5*np.log10(Zb)
-        """
+        self.data['zp'][band] = mbZ
+
         filtre_trans = self.atmosphere[band]
         if self.atmos:
             filtre_trans = self.atmosphere[band]
@@ -212,8 +238,8 @@ class Telescope(Throughputs):
             filtre_trans = self.aerosol[band]
         wavelen_min, wavelen_max, wavelen_step = \
             filtre_trans.get_wavelen_limits(None, None, None)
-        """
-        filtre_trans = self.lsst_system[band]
+
+        #filtre_trans = self.lsst_system[band]
         wavelen_min, wavelen_max, wavelen_step = filtre_trans.get_wavelen_limits(
             None, None, None)
         bpass = Bandpass(wavelen=filtre_trans.wavelen, sb=filtre_trans.sb)
@@ -223,10 +249,12 @@ class Telescope(Throughputs):
         flatSed.multiply_flux_norm(flux0)
         photParams = photometric_parameters.PhotometricParameters(
             bandpass=band)
+
         # number of counts for exptime
         counts = flatSed.calc_adu(bpass, phot_params=photParams)
-        self.data['zp'][band] = mbZ
-        self.data['counts_zp'][band] = counts/photParams.exptime
+
+        self.data['counts_zp'][band] = counts*photParams.gain / \
+            (photParams.exptime*photParams.nexp)
 
     def return_value(self, what, band):
         """
@@ -474,24 +502,26 @@ class Telescope(Throughputs):
            flux in photoelectron per sec.
 
         """
+        filter_trans = self.atmosphere[band]
         if not hasattr(mag, '__iter__'):
-            wavelen_min, wavelen_max, wavelen_step = self.atmosphere[band].get_avelen_limits(
+            wavelen_min, wavelen_max, wavelen_step = filter_trans.get_wavelen_limits(
                 None, None, None)
             sed = Sed()
             sed.set_flat_sed()
 
-            flux0 = sed.calcFluxNorm(mag, self.atmosphere[band])
+            flux0 = sed.calc_flux_norm(mag, filter_trans)
             sed.multiply_flux_norm(flux0)
 
             photParams = photometric_parameters.PhotometricParameters(
                 exptime=exptime, nexp=nexp)
 
             counts = sed.calc_adu(
-                bandpass=self.atmosphere[band], phot_params=photParams)
+                bandpass=filter_trans, phot_params=photParams)
             e_per_sec = counts
 
             # counts per sec
-            e_per_sec /= (exptime*nexp)
+            e_per_sec /= exptime
+            counts /= exptime
             # conversion to pe
             e_per_sec *= photParams.gain
             return counts, e_per_sec
