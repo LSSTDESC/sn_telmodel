@@ -64,14 +64,10 @@ class Throughputs(object):
                 # params[par]=str(kwargs[par])
 
         self.atmos = params['atmos']
-        self.throughputsDir = os.getenv(params['through_dir'])
+        #self.throughputsDir = os.getenv(params['through_dir'])
+        self.throughputsDir = params['through_dir']
 
-        if os.path.exists(os.path.join
-                          (os.getenv(params['atmos_dir']), 'atmos')):
-            self.atmosDir = os.path.join(
-                os.getenv(params['atmos_dir']), 'atmos')
-        else:
-            self.atmosDir = os.getenv(params['atmos_dir'])
+        self.atmosDir = params['atmos_dir']
 
         self.telescope_files = params['telescope_files']
         self.filter_files = ['filter_'+f+'.dat' for f in params['filterlist']]
@@ -139,6 +135,7 @@ class Throughputs(object):
                 telfiles = self.telescope_files+[self.filter_files[index[0]]]
             else:
                 telfiles = self.filter_files
+
             self.lsst_system[f].read_throughput_list(telfiles,
                                                      root_dir=self.throughputsDir,
                                                      wavelen_min=self.wave_min,
