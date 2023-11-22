@@ -57,14 +57,17 @@ class Throughputs(object):
         params['filterlist'] = 'ugrizy'
         params['wave_min'] = 300.
         params['wave_max'] = 1150.
+        params['load_components'] = False
+
         for par in ['through_dir', 'atmos_dir', 'atmos', 'aerosol',
-                    'telescope_files', 'filterlist', 'wave_min', 'wave_max']:
+                    'telescope_files', 'filterlist', 'wave_min',
+                    'wave_max', 'load_components']:
             if par in kwargs.keys():
                 params[par] = kwargs[par]
                 # params[par]=str(kwargs[par])
 
         self.atmos = params['atmos']
-        #self.throughputsDir = os.getenv(params['through_dir'])
+        # self.throughputsDir = os.getenv(params['through_dir'])
         self.throughputsDir = params['through_dir']
 
         self.atmosDir = params['atmos_dir']
@@ -104,6 +107,9 @@ class Throughputs(object):
 
         self.Mean_Wave()
 
+        if params['load_components']:
+            self.Load_components()
+
     @property
     def system(self):
         return self.lsst_system
@@ -119,6 +125,33 @@ class Throughputs(object):
     @property
     def aerosol(self):
         return self.lsst_atmos_aerosol
+
+    def Load_components(self):
+        """
+        Method to load all components (detector, lenses, filters, mirrors)
+
+        Returns
+        -------
+        None.
+
+        """
+
+        self.optical = {}
+
+        for fi in self.telescope_files:
+            vv = Bandpass()
+            path_vv = os.path.join(self.throughputsDir, fi)
+            vv.read_throughput(path_vv)
+            nname = fi.split('.dat')[0]
+            self.optical[nname] = vv
+
+        self.filter = {}
+        for f in self.filterlist:
+            vv = Bandpass()
+            path_vv = os.path.join(self.throughputsDir,
+                                   'filter_{}.dat'.format(f))
+            vv.read_throughput(path_vv)
+            self.filter[f] = vv
 
     def Load_System(self):
         """ Load files required to estimate throughputs
