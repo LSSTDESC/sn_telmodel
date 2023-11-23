@@ -29,6 +29,175 @@ def get_val_decorb(func):
     return func_decob
 
 
+class Zeropoint_airmass:
+    def __init__(self, tel_dir='throughputs',
+                 through_dir='throughputs/baseline',
+                 atmos_dir='throughputs/atmos',
+                 tag='1.9', aerosol=True):
+        """
+        class to estimate zp vs airmass and fit (linear) the results
+
+        Parameters
+        ----------
+        tel_dir : str, optional
+            telescope main dir. The default is 'throughputs'.
+        through_dir : str, optional
+            throughputs dir. The default is 'throughputs/baseline'.
+        atmos_dir : str, optional
+            dir for atmos files. The default is 'throughputs/atmos'.
+        tag : str, optional
+            throughputs tag. The default is '1.9'.
+        aerosol : bool, optional
+            to include aerosol. The default is True.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        self.tel_dir = tel_dir
+        self.through_dir = through_dir
+        self.atmos_dir = atmos_dir
+        self.tag = tag
+        self.aerosol = aerosol
+
+    def get_data(self):
+        """
+        Method to estimate zp vs airmass
+
+        Returns
+        -------
+        res : numpy array
+            columns: filter, zp, airmass, mean_wave.
+
+        """
+
+        r = []
+        for airmass in np.arange(1., 2.51, 0.1):
+            tel = get_telescope(tel_dir=self.tel_dir,
+                                through_dir=self.through_dir,
+                                atmos_dir=self.atmos_dir,
+                                tag=self.tag, airmass=airmass,
+                                aerosol=self.aerosol)
+            for b in 'ugrizy':
+                # b = 'g'
+                # print(airmass, b, tel.zp(b))
+                mean_wave = tel.mean_wavelength[b]
+                rb = [airmass]
+                rb.append(b)
+                rb.append(tel.zp(b))
+                rb.append(tel.counts_zp(b))
+                rb.append(mean_wave)
+                r.append(rb)
+
+        res = np.rec.fromrecords(
+            r, names=['airmass', 'band', 'zp', 'zp_adu_sec', 'mean_wavelength'])
+
+        return res
+
+    def fitfunc(self, x, a, b):
+        """
+        Function used for fitting
+
+        Parameters
+        ----------
+        x : array(float)
+            x-axis var.
+        a : float
+            slope.
+        b : float
+            intercept.
+
+        Returns
+        -------
+        array
+            list of values.
+
+        """
+
+        return a*x+b
+
+    def fit(self, res, xvar='airmass', yvar='zp'):
+        """
+        Function to fit yvar vs xvar for all bands.
+
+        Parameters
+        ----------
+        res : array
+            data to fit.
+        xvar : str, optional
+            x-axis var. The default is 'airmass'.
+        yvar : str, optional
+            y-axis var. The default is 'zp'.
+
+        Returns
+        -------
+        res : array
+            slop and intercep from the fit per band.
+            added mean_wavelength.
+
+        """
+
+        from scipy.optimize import curve_fit
+        r = []
+        for b in 'ugrizy':
+            idx = res['band'] == b
+            sel = res[idx]
+            xdata = sel[xvar]
+            ydata = sel[yvar]
+            popt, pcov = curve_fit(self.fitfunc, xdata, ydata)
+            mean_wave = np.mean(sel['mean_wavelength'])
+            r.append((b, popt[0], popt[1], mean_wave))
+
+        res = np.rec.fromrecords(
+            r, names=['band', 'slope', 'intercept', 'mean_wavelength'])
+
+        return res
+
+    def get_fit_params(self):
+
+        # get data
+        data = self.get_data()
+
+        # fit these data
+        fitdata = self.fit(data)
+
+        return fitdata
+
+
+def load_telescope_from_config(config):
+    """
+    Function to load telescope model
+
+    Parameters
+    ----------
+    config : dict
+        configuration parameters.
+
+    Returns
+    -------
+    tel : Telescope class (sn_telmodel.sn_telescope)
+        Telescope model.
+
+    """
+
+    name = config['name']
+    tel_dir = config['telescope']['dir']
+    tel_tag = config['telescope']['tag']
+    through_dir = config['throughputDir']
+    atmos_dir = config['atmosDir']
+    airmass = config['airmass']
+    aerosol = config['aerosol']
+
+    tel = get_telescope(name=name, tel_dir=tel_dir,
+                        through_dir=through_dir,
+                        atmos_dir=atmos_dir, airmass=airmass,
+                        aerosol=aerosol, tag=tel_tag)
+
+    return tel
+
+
 def get_telescope(name='LSST',
                   tel_dir='throughputs',
                   through_dir='throughputs/baseline',
@@ -70,7 +239,7 @@ def get_telescope(name='LSST',
     os.system(cmd)
     os.chdir(path)
 
-    tel = Telescope(name=name,
+    tel = Telescope(name=name, tel_dir=tel_dir,
                     airmass=airmass, through_dir=through_dir,
                     atmos_dir=atmos_dir, aerosol=aerosol,
                     load_components=load_components)
@@ -141,13 +310,19 @@ class Telescope(Throughputs):
 
     """
 
-    def __init__(self, name='unknown', airmass=1., **kwargs):
+    def __init__(self, name='unknown', airmass=1.,
+                 tel_dir='throughputs', tag='1.9', **kwargs):
+        super().__init__(**kwargs)
+        """
         self.name = name
-        Throughputs.__init__(self, **kwargs)
 
+        Throughputs.__init__(self, **kwargs)
+        """
         params = ['mag_sky', 'm5', 'FWHMeff', 'Tb',
                   'Sigmab', 'zp', 'counts_zp', 'Skyb', 'flux_sky']
-
+        self.name = name
+        self.tel_dir = tel_dir
+        self.tag = tag
         self.data = {}
         for par in params:
             self.data[par] = {}
