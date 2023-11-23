@@ -29,6 +29,55 @@ def get_val_decorb(func):
     return func_decob
 
 
+def get_telescope(name='LSST',
+                  tel_dir='throughputs',
+                  through_dir='throughputs/baseline',
+                  atmos_dir='throughputs/atmos',
+                  tag='1.9', airmass=1.2,
+                  aerosol=True, load_components=False):
+    """
+    Function to grab telescope version
+
+    Parameters
+    ----------
+    name : str, optional
+       Telescope name. The default is 'LSST'.
+    tel_dir : str, optional
+       Main tel directory. The default is 'throughputs'.
+    through_dir : str, optional
+        Throughput directory. The default is 'throughputs/baseline'.
+    atmos_dir : str, optional
+        Atmosphere directory. The default is 'throughputs/atmos'.
+    tag : str, optional
+        Tag version for throughputs. The default is '1.9'.
+    airmass : float, optional
+        airmass value for throughputs. The default is 1.2.
+    aerosol : bool, optional
+        add aerosol effect. The default is True.
+    load_components : bool, optional
+        To load all the components (one by one). The default is False.
+    Returns
+    -------
+    tela : TYPE
+        DESCRIPTION.
+
+    """
+    import os
+    path = os.getcwd()
+
+    os.chdir(tel_dir)
+    cmd = 'git checkout tags/{}'.format(tag)
+    os.system(cmd)
+    os.chdir(path)
+
+    tel = Telescope(name=name,
+                    airmass=airmass, through_dir=through_dir,
+                    atmos_dir=atmos_dir, aerosol=aerosol,
+                    load_components=load_components)
+
+    return tel
+
+
 class Telescope(Throughputs):
     """ Telescope class
     inherits from Throughputs
