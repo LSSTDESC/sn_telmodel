@@ -16,6 +16,7 @@ os.environ['THROUGHPUTS_DIR'] = throughputs_dir
 print('Reading throughputs from',
       os.environ['LSST_THROUGHPUTS_BASELINE'], os.environ['THROUGHPUTS_DIR'])
 """
+filtercolors = dict(zip('ugrizy', ['b', 'c', 'g', 'y', 'r', 'm']))
 plt.rcParams['xtick.labelsize'] = 20
 plt.rcParams['ytick.labelsize'] = 20
 plt.rcParams['axes.labelsize'] = 20
