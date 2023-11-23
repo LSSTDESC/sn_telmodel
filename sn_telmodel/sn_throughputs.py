@@ -66,7 +66,7 @@ class Throughputs(object):
                 params[par] = kwargs[par]
                 # params[par]=str(kwargs[par])
 
-        self.atmos = params['atmos']
+        # self.atmos = params['atmos']
         # self.throughputsDir = os.getenv(params['through_dir'])
         self.throughputsDir = params['through_dir']
 
