@@ -74,6 +74,7 @@ class Zeropoint_airmass:
         """
 
         r = []
+        point_to_tag(self.tel_dir, self.tag)
         for airmass in np.arange(1., 2.51, 0.1):
             tel = get_telescope(tel_dir=self.tel_dir,
                                 through_dir=self.through_dir,
@@ -190,6 +191,8 @@ def load_telescope_from_config(config):
     airmass = config['airmass']
     aerosol = config['aerosol']
 
+    point_to_tag(tel_dir, tel_tag)
+
     tel = get_telescope(name=name, tel_dir=tel_dir,
                         through_dir=through_dir,
                         atmos_dir=atmos_dir, airmass=airmass,
@@ -231,6 +234,32 @@ def get_telescope(name='LSST',
         DESCRIPTION.
 
     """
+
+    tel = Telescope(name=name, tel_dir=tel_dir,
+                    airmass=airmass, through_dir=through_dir,
+                    atmos_dir=atmos_dir, aerosol=aerosol,
+                    load_components=load_components, tag=tag)
+
+    return tel
+
+
+def point_to_tag(tel_dir, tag):
+    """
+    Function to point to a given tel tag version
+
+    Parameters
+    ----------
+    tel_dir : str
+        Main telescope dir.
+    tag : str
+        Tag throughputs version.
+
+    Returns
+    -------
+    None.
+
+    """
+
     import os
     path = os.getcwd()
 
@@ -238,13 +267,6 @@ def get_telescope(name='LSST',
     cmd = 'git checkout tags/{}'.format(tag)
     os.system(cmd)
     os.chdir(path)
-
-    tel = Telescope(name=name, tel_dir=tel_dir,
-                    airmass=airmass, through_dir=through_dir,
-                    atmos_dir=atmos_dir, aerosol=aerosol,
-                    load_components=load_components)
-
-    return tel
 
 
 class Telescope(Throughputs):
