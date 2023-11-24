@@ -1,12 +1,14 @@
+from functools import wraps
+from scipy.constants import *
+import numpy as np
 from rubin_sim.phot_utils import photometric_parameters
 from rubin_sim.phot_utils import Bandpass, Sed
 from sn_telmodel.sn_throughputs import Throughputs
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
-import numpy as np
 # import matplotlib.pyplot as plt
 # import math
-from scipy.constants import *
-from functools import wraps
 
 # decorator to access parameters of the class
 
@@ -374,8 +376,11 @@ class Telescope(Throughputs):
         """
         filter_trans = self.system[band]
         # filter_trans = self.lsst_atmos_aerosol[band]
-        wavelen_min, wavelen_max, wavelen_step = \
-            filter_trans.get_wavelen_limits(None, None, None)
+        # wavelen_min, wavelen_max, wavelen_step = \
+        #    filter_trans.get_wavelen_limits(None, None, None)
+        wavelen_min = np.min(filtre_trans.wavelen)
+        wavelen_max = np.max(filtre_trans.wavelen)
+        wavelen_step = filtre_trans.wavelen[1] - filtre_trans.wavelen[0]
 
         # bpass = Bandpass(wavelen=filter_trans.wavelen, sb=filter_trans.sb)
         """
@@ -482,15 +487,24 @@ class Telescope(Throughputs):
             filtre_trans = self.atmosphere[band]
         if self.aerosol_b:
             filtre_trans = self.aerosol[band]
+        """
         wavelen_min, wavelen_max, wavelen_step = \
             filtre_trans.get_wavelen_limits(None, None, None)
 
         #filtre_trans = self.lsst_system[band]
         wavelen_min, wavelen_max, wavelen_step = filtre_trans.get_wavelen_limits(
             None, None, None)
+        """
+        wavelen_min = np.min(filtre_trans.wavelen)
+        wavelen_max = np.max(filtre_trans.wavelen)
+        wavelen_step = filtre_trans.wavelen[1] - filtre_trans.wavelen[0]
+
+        #diff = np.diff(filtre_trans.wavelen)
         bpass = Bandpass(wavelen=filtre_trans.wavelen, sb=filtre_trans.sb)
         flatSed = Sed()
-        flatSed.set_flat_sed(wavelen_min, wavelen_max, wavelen_step)
+        flatSed.set_flat_sed(wavelen_min,
+                             wavelen_max, wavelen_step)
+
         flux0 = np.power(10., -0.4*mbZ)
         flatSed.multiply_flux_norm(flux0)
         photParams = photometric_parameters.PhotometricParameters(
@@ -750,8 +764,13 @@ class Telescope(Throughputs):
         """
         filter_trans = self.atmosphere[band]
         if not hasattr(mag, '__iter__'):
-            wavelen_min, wavelen_max, wavelen_step = filter_trans.get_wavelen_limits(
-                None, None, None)
+
+            # wavelen_min, wavelen_max, wavelen_step = filter_trans.get_wavelen_limits(
+            #    None, None, None)
+            wavelen_min = np.min(filtre_trans.wavelen)
+            wavelen_max = np.max(filtre_trans.wavelen)
+            wavelen_step = filtre_trans.wavelen[1] - filtre_trans.wavelen[0]
+
             sed = Sed()
             sed.set_flat_sed()
 
