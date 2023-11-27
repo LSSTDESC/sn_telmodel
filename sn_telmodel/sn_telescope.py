@@ -33,8 +33,8 @@ def get_val_decorb(func):
 
 class Zeropoint_airmass:
     def __init__(self, tel_dir='throughputs',
-                 through_dir='throughputs/baseline',
-                 atmos_dir='throughputs/atmos',
+                 through_dir='baseline',
+                 atmos_dir='atmos',
                  tag='1.9', aerosol=True):
         """
         class to estimate zp vs airmass and fit (linear) the results
@@ -77,10 +77,13 @@ class Zeropoint_airmass:
 
         r = []
         point_to_tag(self.tel_dir, self.tag)
+        tel_dir = '{}_{}'.format(self.tel_dir, self.tag)
+        through_dir = '{}/{}'.format(tel_dir, self.through_dir)
+        atmos_dir = '{}/{}'.format(tel_dir, self.atmos_dir)
         for airmass in np.arange(1., 2.51, 0.1):
-            tel = get_telescope(tel_dir=self.tel_dir,
-                                through_dir=self.through_dir,
-                                atmos_dir=self.atmos_dir,
+            tel = get_telescope(tel_dir=tel_dir,
+                                through_dir=through_dir,
+                                atmos_dir=atmos_dir,
                                 tag=self.tag, airmass=airmass,
                                 aerosol=self.aerosol)
             for b in 'ugrizy':
@@ -195,6 +198,10 @@ def load_telescope_from_config(config):
 
     point_to_tag(tel_dir, tel_tag)
 
+    tel_dir = '{}_{}'.format(tel_dir, tel_tag)
+    through_dir = '{}/{}'.format(tel_dir, through_dir)
+    atmos_dir = '{}/{}'.format(tel_dir, atmos_dir)
+
     tel = get_telescope(name=name, tel_dir=tel_dir,
                         through_dir=through_dir,
                         atmos_dir=atmos_dir, airmass=airmass,
@@ -205,8 +212,8 @@ def load_telescope_from_config(config):
 
 def get_telescope(name='LSST',
                   tel_dir='throughputs',
-                  through_dir='throughputs/baseline',
-                  atmos_dir='throughputs/atmos',
+                  through_dir='baseline',
+                  atmos_dir='atmos',
                   tag='1.9', airmass=1.2,
                   aerosol=True, load_components=False):
     """
@@ -237,6 +244,8 @@ def get_telescope(name='LSST',
 
     """
 
+    print('Telescope instance', tel_dir)
+
     tel = Telescope(name=name, tel_dir=tel_dir,
                     airmass=airmass, through_dir=through_dir,
                     atmos_dir=atmos_dir, aerosol=aerosol,
@@ -264,11 +273,16 @@ def point_to_tag(tel_dir, tag):
 
     import os
     path = os.getcwd()
+    throughputs_dir = '{}_{}'.format(tel_dir, tag)
+    if not os.path.isdir(throughputs_dir):
+        cmd = 'git clone https://github.com/lsst/{} {}_{}'.format(
+            tel_dir, tel_dir, tag)
+        os.system(cmd)
 
-    os.chdir(tel_dir)
-    cmd = 'git checkout tags/{}'.format(tag)
-    os.system(cmd)
-    os.chdir(path)
+        os.chdir(throughputs_dir)
+        cmd = 'git checkout tags/{}'.format(tag)
+        os.system(cmd)
+        os.chdir(path)
 
 
 class Telescope(Throughputs):
