@@ -392,9 +392,9 @@ class Telescope(Throughputs):
         # filter_trans = self.lsst_atmos_aerosol[band]
         # wavelen_min, wavelen_max, wavelen_step = \
         #    filter_trans.get_wavelen_limits(None, None, None)
-        wavelen_min = np.min(filtre_trans.wavelen)
-        wavelen_max = np.max(filtre_trans.wavelen)
-        wavelen_step = filtre_trans.wavelen[1] - filtre_trans.wavelen[0]
+        wavelen_min = np.min(filter_trans.wavelen)
+        wavelen_max = np.max(filter_trans.wavelen)
+        wavelen_step = filter_trans.wavelen[1] - filter_trans.wavelen[0]
 
         # bpass = Bandpass(wavelen=filter_trans.wavelen, sb=filter_trans.sb)
         """
@@ -781,9 +781,9 @@ class Telescope(Throughputs):
 
             # wavelen_min, wavelen_max, wavelen_step = filter_trans.get_wavelen_limits(
             #    None, None, None)
-            wavelen_min = np.min(filtre_trans.wavelen)
-            wavelen_max = np.max(filtre_trans.wavelen)
-            wavelen_step = filtre_trans.wavelen[1] - filtre_trans.wavelen[0]
+            wavelen_min = np.min(filter_trans.wavelen)
+            wavelen_max = np.max(filter_trans.wavelen)
+            wavelen_step = filter_trans.wavelen[1] - filter_trans.wavelen[0]
 
             sed = Sed()
             sed.set_flat_sed()
