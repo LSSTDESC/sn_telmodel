@@ -214,7 +214,7 @@ def get_telescope(name='LSST',
                   tel_dir='throughputs',
                   through_dir='baseline',
                   atmos_dir='atmos',
-                  tag='1.9', airmass=1.2,
+                  tag='1.9', airmass=1.2, gain=2.5,
                   aerosol=True, load_components=False):
     """
     Function to grab telescope version
@@ -233,6 +233,8 @@ def get_telescope(name='LSST',
         Tag version for throughputs. The default is '1.9'.
     airmass : float, optional
         airmass value for throughputs. The default is 1.2.
+    gain: float, optional.
+         electronic gain. The default is 2.5
     aerosol : bool, optional
         add aerosol effect. The default is True.
     load_components : bool, optional
@@ -249,7 +251,7 @@ def get_telescope(name='LSST',
     tel = Telescope(name=name, tel_dir=tel_dir,
                     airmass=airmass, through_dir=through_dir,
                     atmos_dir=atmos_dir, aerosol=aerosol,
-                    load_components=load_components, tag=tag)
+                    load_components=load_components, tag=tag, gain=gain)
 
     return tel
 
@@ -349,7 +351,7 @@ class Telescope(Throughputs):
     """
 
     def __init__(self, name='unknown', airmass=1.,
-                 tel_dir='throughputs', tag='1.9', **kwargs):
+                 tel_dir='throughputs', tag='1.9', gain=2.5, **kwargs):
         super().__init__(**kwargs)
         """
         self.name = name
@@ -362,6 +364,7 @@ class Telescope(Throughputs):
         self.tel_dir = tel_dir
         self.tag = tag
         self.data = {}
+        self.gain = gain
         for par in params:
             self.data[par] = {}
 
@@ -413,7 +416,7 @@ class Telescope(Throughputs):
         vv /= (photParams.exptime)
         """
         photParams = photometric_parameters.PhotometricParameters(
-            bandpass=band)
+            gain=self.gain, bandpass=band)
         photParams._exptime = exptime
         photParams._nexp = 1
         exptime = photParams.exptime
@@ -478,8 +481,8 @@ class Telescope(Throughputs):
           filter
 
         """
-        photParams = photometric_parameters.PhotometricParameters(
-            bandpass=band)
+        photParams = photometric_parameters.PhotometricParameters(gain=self.gain,
+                                                                  bandpass=band)
         photParams._exptime = 30
         photParams._nexp = 1
         Diameter = 2.*np.sqrt(photParams.effarea*1.e-4 /
@@ -522,7 +525,7 @@ class Telescope(Throughputs):
         flux0 = np.power(10., -0.4*mbZ)
         flatSed.multiply_flux_norm(flux0)
         photParams = photometric_parameters.PhotometricParameters(
-            bandpass=band)
+            gain=self.gain, bandpass=band)
 
         # number of counts for exptime
         counts = flatSed.calc_adu(bpass, phot_params=photParams)
@@ -791,8 +794,8 @@ class Telescope(Throughputs):
             flux0 = sed.calc_flux_norm(mag, filter_trans)
             sed.multiply_flux_norm(flux0)
 
-            photParams = photometric_parameters.PhotometricParameters(
-                exptime=exptime, nexp=nexp)
+            photParams = photometric_parameters.PhotometricParameters(gain=self.gain,
+                                                                      exptime=exptime, nexp=nexp)
 
             counts = sed.calc_adu(
                 bandpass=filter_trans, phot_params=photParams)
@@ -837,8 +840,8 @@ class Telescope(Throughputs):
         """
 
         if not hasattr(mag, '__iter__'):
-            photParams = photometric_parameters.PhotometricParameters(
-                nexp=nexp, exptime=exptime)
+            photParams = photometric_parameters.PhotometricParameters(gain=self.gain,
+                                                                      nexp=nexp, exptime=exptime)
             counts, e_per_sec = self.mag_to_flux_e_sec(
                 mag, band, exptime, nexp)
             gamma = 0.04-1./(photParams.gain*counts)
