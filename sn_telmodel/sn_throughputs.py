@@ -317,67 +317,75 @@ class Throughputs(object):
 
         return through
 
-    def plot_Throughputs(self):
+    def plot_Throughputs(self, fig=None, ax=None):
         """ Plot the throughputs
         """
         # colors=['b','g','r','m','c',[0.8,0,0]]
         # style = [',', ',', ',', ',']
+
+        if fig is None:
+            fig, ax = plt.subplots(figsize=(15, 12))
+
         for i, band in enumerate(self.filterlist):
 
-            plt.plot(self.lsst_system[band].wavelen,
-                     self.lsst_system[band].sb,
-                     linestyle='--', color=self.filtercolors[band],
-                     label='%s - syst' % (band))
-            plt.plot(self.lsst_atmos[band].wavelen,
-                     self.lsst_atmos[band].sb,
-                     linestyle='-.', color=self.filtercolors[band],
-                     label='%s - syst+atm' % (band))
+            ax.plot(self.lsst_system[band].wavelen,
+                    self.lsst_system[band].sb,
+                    linestyle='--', color=self.filtercolors[band],
+                    label='%s - syst' % (band))
+            ax.plot(self.lsst_atmos[band].wavelen,
+                    self.lsst_atmos[band].sb,
+                    linestyle='-.', color=self.filtercolors[band],
+                    label='%s - syst+atm' % (band))
             if len(self.lsst_atmos_aerosol) > 0:
-                plt.plot(self.lsst_atmos_aerosol[band].wavelen,
-                         self.lsst_atmos_aerosol[band].sb,
-                         linestyle='-', color=self.filtercolors[band],
-                         label='%s - syst+atm+aero' % (band))
+                ax.plot(self.lsst_atmos_aerosol[band].wavelen,
+                        self.lsst_atmos_aerosol[band].sb,
+                        linestyle='-', color=self.filtercolors[band],
+                        label='%s - syst+atm+aero' % (band))
 
-        plt.plot(self.atmos.wavelen, self.atmos.sb, color='k',
-                 label='X =%.1f atmos' % (self.airmass), linestyle='-')
+        ax.plot(self.atmos.wavelen, self.atmos.sb, color='k',
+                label='X =%.1f atmos' % (self.airmass), linestyle='-')
         if len(self.lsst_atmos_aerosol) > 0:
-            plt.plot(self.atmos_aerosol.wavelen, self.atmos_aerosol.sb,
-                     color='k',
-                     label='X =%.1f atm+aero' % (self.airmass),
-                     linestyle='--')
+            ax.plot(self.atmos_aerosol.wavelen, self.atmos_aerosol.sb,
+                    color='k',
+                    label='X =%.1f atm+aero' % (self.airmass),
+                    linestyle='--')
         # plt.legend(loc=(0.85, 0.1), fontsize='smaller',
             # fancybox=True, numpoints=1)
 
-        plt.legend(loc=(0.82, 0.1), fancybox=True, numpoints=1)
+        ax.legend(loc=(0.82, 0.1), fancybox=True, numpoints=1)
 
-        plt.xlabel('Wavelength (nm)')
-        plt.ylabel('Sb (0-1)')
-        plt.title('System throughput')
-        plt.show()
+        ax.set_xlabel('Wavelength (nm)')
+        ax.set_ylabel('Sb (0-1)')
+        ax.set_title('System throughput')
+        ax.grid(visible=True)
 
-    def plot_DarkSky(self):
+    def plot_DarkSky(self, fig=None, ax=None):
         """ Plot darksky
         """
         # self.Load_DarkSky()
-        plt.plot(self.darksky.wavelen,
-                 self.darksky.flambda, 'k:', linestyle='-')
-        plt.xlabel('Wavelength (nm)')
-        plt.ylabel('flambda (ergs/cm$^2$/s/nm)')
-        plt.title('Dark Sky SED')
-        plt.show()
 
-    def plot_Throughputs_Spectrum(self, wavelength, fluxes, z):
+        if fig is None:
+            fig, ax = plt.subplots()
+
+        ax.plot(self.darksky.wavelen,
+                self.darksky.flambda, 'k:', linestyle='-')
+        ax.xlabel('Wavelength (nm)')
+        ax.ylabel('flambda (ergs/cm$^2$/s/nm)')
+        ax.title('Dark Sky SED')
+
+    def plot_Throughputs_Spectrum(self, wavelength, fluxes, z, fig=None, ax=None):
         """ Plot throughput spectrum
         """
-        fig, ax1 = plt.subplots()
+        if fig is None:
+            fig, ax = plt.subplots()
         # style = [',', ',', ',', ',']
 
         for i, band in enumerate(self.filterlist):
 
-            plt.plot(self.lsst_system[band].wavelen,
-                     self.lsst_system[band].sb,
-                     linestyle='-', color=self.filtercolors[band],
-                     label='%s - system' % (band))
+            ax.plot(self.lsst_system[band].wavelen,
+                    self.lsst_system[band].sb,
+                    linestyle='-', color=self.filtercolors[band],
+                    label='%s - system' % (band))
 
     def mean_wave(self):
         """ Estimate mean wave
