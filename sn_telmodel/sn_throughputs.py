@@ -57,11 +57,11 @@ class Throughputs(object):
         params['filterlist'] = 'ugrizy'
         params['wave_min'] = 300.
         params['wave_max'] = 1150.
-        params['load_components'] = False
+        # params['load_components'] = False
 
         for par in ['through_dir', 'atmos_dir', 'atmos', 'aerosol',
                     'telescope_files', 'filterlist', 'wave_min',
-                    'wave_max', 'load_components']:
+                    'wave_max']:
             if par in kwargs.keys():
                 params[par] = kwargs[par]
                 # params[par]=str(kwargs[par])
@@ -89,26 +89,26 @@ class Throughputs(object):
         self.lsst_detector = {}
         self.lsst_atmos = {}
         self.lsst_atmos_aerosol = {}
-        self.airmass = -1.
-        self.aerosol_b = params['aerosol']
-        self.Load_System()
-        self.Load_DarkSky()
+        # airmass = 1.0
+        # aerosol = ''
+        self.load_system()
+        self.load_darkSky()
+        self.load_components()
 
+        """
         if params['atmos']:
-            self.Load_Atmosphere()
+            self.Load_Atmosphere(airmass=airmass, aerosol=aerosol)
         else:
             for f in self.filterlist:
                 self.lsst_atmos[f] = self.lsst_system[f]
                 self.lsst_atmos_aerosol[f] = self.lsst_system[f]
 
+        """
         # self.lsst_telescope={}
 
         # self.Load_Telescope()
 
-        self.Mean_Wave()
-
-        if params['load_components']:
-            self.Load_components()
+        # self.mean_wave()
 
     @property
     def system(self):
@@ -126,7 +126,7 @@ class Throughputs(object):
     def aerosol(self):
         return self.lsst_atmos_aerosol
 
-    def Load_components(self):
+    def load_components(self):
         """
         Method to load all components (detector, lenses, filters, mirrors)
 
@@ -153,7 +153,7 @@ class Throughputs(object):
             vv.read_throughput(path_vv)
             self.filter[f] = vv
 
-    def Load_System(self):
+    def load_system(self):
         """ Load files required to estimate throughputs
         """
 
@@ -176,22 +176,21 @@ class Throughputs(object):
 
     """
     def Load_Telescope(self):
-        for system in self.telescope_files+self.filter_files:
-            self.lsst_telescope[system] = Bandpass()
+        for syst.lsst_telescope[system] = Bandpass()
             self.lsst_telescope[system].readThroughputList([system],
                                                         rootDir=self.throughputsDir,
                                                         wavelen_min=self.wave_min,
                                                         wavelen_max=self.wave_max)
      """
 
-    def Load_DarkSky(self):
+    def load_darkSky(self):
         """ Load DarkSky
         """
         self.darksky = Sed()
         self.darksky.read_sed_flambda(os.path.join(
             self.throughputsDir, 'darksky.dat'))
 
-    def Load_Atmosphere(self, airmass=1.2):
+    def load_Atmosphere_deprecated(self, airmass=1.2, aerosol=True):
         """ Load atmosphere files
         and convolve with transmissions
 
@@ -202,6 +201,7 @@ class Throughputs(object):
           Default : 1.2
         """
         self.airmass = airmass
+        self.aerosol = aerosol
         if self.airmass > 0.:
             atmosphere = Bandpass()
             path_atmos = os.path.join(
@@ -216,7 +216,7 @@ class Throughputs(object):
                     atmosphere.wavelen, atmosphere.sb)
                 self.lsst_atmos[f] = Bandpass(wavelen=wavelen, sb=sb)
 
-            if self.aerosol_b:
+            if self.aerosol:
                 atmosphere_aero = Bandpass()
                 path_aero_atmos = os.path.join(
                     self.atmosDir, 'atmos_%d_aerosol.dat' % (self.airmass*10))
@@ -234,7 +234,90 @@ class Throughputs(object):
                 self.lsst_atmos[f] = self.lsst_system[f]
                 self.lsst_atmos_aerosol[f] = self.lsst_system[f]
 
-    def Plot_Throughputs(self):
+    def load_atmosphere(self, airmass=1.2, aerosol='aerosol'):
+        """ Load atmosphere files
+        and convolve with transmissions
+
+        Parameters
+        --------------
+        airmass : float,opt
+          airmass value
+          Default : 1.2
+        """
+        self.airmass = airmass
+        self.aerosol_v = aerosol
+
+        if airmass > 0.:
+            airmass_val = str(int(10*airmass))
+            fName = ['atmos']+[airmass_val]
+            # fName = 'atmos_{}.dat'.format(int(10*airmass))
+            atmosphere = self.get_bandpass(fName)
+            self.atmos = atmosphere
+            self.lsst_atmos = self.get_throughputs(atmosphere)
+
+            if self.aerosol_v != '':
+                # fName = 'atmos_{}_{}.dat'.format(int(10*airmass), aerosol)
+                fName = ['atmos']+[airmass_val]+[aerosol]
+                atmosphere_aerosol = self.get_bandpass(fName)
+                self.atmos_aerosol = atmosphere_aerosol
+                self.lsst_atmos_aerosol = self.get_throughputs(
+                    atmosphere_aerosol)
+
+    def get_bandpass(self, fName):
+        """
+        Method to grab the band pass corresponding to data in fName
+
+        Parameters
+        ----------
+        fName : str
+            file name to process.
+
+        Returns
+        -------
+        atmos : Bandpass
+            wavelength and throughputs.
+
+        """
+
+        atmosphere = Bandpass()
+        fNameb = '{}.dat'.format('_'.join(fName))
+        path_atmos = os.path.join(self.atmosDir, fNameb)
+        if not os.path.exists(path_atmos):
+            print('Big problem: file', fNameb, 'not found')
+            fName[1] = '25'
+            fNameb = '{}.dat'.format('_'.join(fName))
+            path_atmos = os.path.join(self.atmosDir, fNameb)
+            print('using', fNameb, 'instead')
+        atmosphere.read_throughput(path_atmos)
+        atmos = Bandpass(wavelen=atmosphere.wavelen, sb=atmosphere.sb)
+
+        return atmos
+
+    def get_throughputs(self, bandpass):
+        """
+        Method to get the resulting throughputs=system*bandpass
+
+        Parameters
+        ----------
+        bandpass : Bandpass
+            Wavelength and sb.
+
+        Returns
+        -------
+        through : dict
+            Resulting troughput (system*filter).
+
+        """
+
+        through = {}
+        for f in self.filterlist:
+            wavelen, sb = self.lsst_system[f].multiply_throughputs(
+                bandpass.wavelen, bandpass.sb)
+            through[f] = Bandpass(wavelen=wavelen, sb=sb)
+
+        return through
+
+    def plot_Throughputs(self):
         """ Plot the throughputs
         """
         # colors=['b','g','r','m','c',[0.8,0,0]]
@@ -272,7 +355,7 @@ class Throughputs(object):
         plt.title('System throughput')
         plt.show()
 
-    def Plot_DarkSky(self):
+    def plot_DarkSky(self):
         """ Plot darksky
         """
         # self.Load_DarkSky()
@@ -283,7 +366,7 @@ class Throughputs(object):
         plt.title('Dark Sky SED')
         plt.show()
 
-    def Plot_Throughputs_Spectrum(self, wavelength, fluxes, z):
+    def plot_Throughputs_Spectrum(self, wavelength, fluxes, z):
         """ Plot throughput spectrum
         """
         fig, ax1 = plt.subplots()
@@ -296,7 +379,7 @@ class Throughputs(object):
                      linestyle='-', color=self.filtercolors[band],
                      label='%s - system' % (band))
 
-    def Mean_Wave(self):
+    def mean_wave(self):
         """ Estimate mean wave
         """
         for band in self.filterlist:

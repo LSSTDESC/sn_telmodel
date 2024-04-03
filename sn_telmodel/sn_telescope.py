@@ -350,7 +350,7 @@ class Telescope(Throughputs):
 
     """
 
-    def __init__(self, name='unknown', airmass=1.,
+    def __init__(self, name='unknown', airmass=1., aerosol='',
                  tel_dir='throughputs', tag='1.9', gain=2.5, **kwargs):
         super().__init__(**kwargs)
         """
@@ -376,7 +376,7 @@ class Telescope(Throughputs):
 
         # self.atmos = atmos
 
-        self.Load_Atmosphere(airmass)
+        self.load_atmosphere(airmass, aerosol)
 
     @get_val_decorb
     def get(self, what, band, exptime):
@@ -516,7 +516,7 @@ class Telescope(Throughputs):
         wavelen_max = np.max(filtre_trans.wavelen)
         wavelen_step = filtre_trans.wavelen[1] - filtre_trans.wavelen[0]
 
-        #diff = np.diff(filtre_trans.wavelen)
+        # diff = np.diff(filtre_trans.wavelen)
         bpass = Bandpass(wavelen=filtre_trans.wavelen, sb=filtre_trans.sb)
         flatSed = Sed()
         flatSed.set_flat_sed(wavelen_min,
