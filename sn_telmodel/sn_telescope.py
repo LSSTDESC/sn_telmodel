@@ -86,6 +86,7 @@ class Zeropoint_airmass:
                                 atmos_dir=atmos_dir,
                                 tag=self.tag, airmass=airmass,
                                 aerosol=self.aerosol)
+            tel.mean_wave()
             for b in 'ugrizy':
                 # b = 'g'
                 # print(airmass, b, tel.zp(b))

@@ -246,6 +246,7 @@ class Throughputs(object):
         """
         self.airmass = airmass
         self.aerosol_v = aerosol
+        self.aerosol_b = False
 
         if airmass > 0.:
             airmass_val = str(int(10*airmass))
@@ -256,6 +257,7 @@ class Throughputs(object):
             self.lsst_atmos = self.get_throughputs(atmosphere)
 
             if self.aerosol_v != '':
+                self.aerosol_b = True
                 # fName = 'atmos_{}_{}.dat'.format(int(10*airmass), aerosol)
                 fName = ['atmos']+[airmass_val]+[aerosol]
                 atmosphere_aerosol = self.get_bandpass(fName)
@@ -283,11 +285,11 @@ class Throughputs(object):
         fNameb = '{}.dat'.format('_'.join(fName))
         path_atmos = os.path.join(self.atmosDir, fNameb)
         if not os.path.exists(path_atmos):
-            print('Big problem: file', fNameb, 'not found')
+            # print('Big problem: file', fNameb, 'not found')
             fName[1] = '25'
             fNameb = '{}.dat'.format('_'.join(fName))
             path_atmos = os.path.join(self.atmosDir, fNameb)
-            print('using', fNameb, 'instead')
+            # print('using', fNameb, 'instead')
         atmosphere.read_throughput(path_atmos)
         atmos = Bandpass(wavelen=atmosphere.wavelen, sb=atmosphere.sb)
 
