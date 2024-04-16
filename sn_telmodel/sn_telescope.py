@@ -462,9 +462,9 @@ class Telescope(Throughputs):
 
         """
         myup = self.Calc_Integ_Sed(self.darksky, self.system[band])
-        bpass = self.atmosphere[band]
-        if self.aerosol_b:
-            bpass = self.aerosol[band]
+        # bpass = self.atmosphere[band]
+        # if self.aerosol_b:
+        bpass = self.aerosol[band]
         self.data['Tb'][band] = self.Calc_Integ(bpass)
         self.data['Sigmab'][band] = self.Calc_Integ(self.system[band])
         tt = np.log10(myup/(3631.*self.Sigmab(band)))
@@ -500,11 +500,14 @@ class Telescope(Throughputs):
         mbZ = 25.+2.5*np.log10(Zb)
         self.data['zp'][band] = mbZ
 
+        """
         filtre_trans = self.atmosphere[band]
         if self.atmos:
             filtre_trans = self.atmosphere[band]
         if self.aerosol_b:
             filtre_trans = self.aerosol[band]
+        """
+        filtre_trans = self.aerosol[band]
         """
         wavelen_min, wavelen_max, wavelen_step = \
             filtre_trans.get_wavelen_limits(None, None, None)
@@ -780,7 +783,7 @@ class Telescope(Throughputs):
            flux in photoelectron per sec.
 
         """
-        filter_trans = self.atmosphere[band]
+        filter_trans = self.aerosol[band]
         if not hasattr(mag, '__iter__'):
 
             # wavelen_min, wavelen_max, wavelen_step = filter_trans.get_wavelen_limits(

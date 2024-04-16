@@ -254,7 +254,7 @@ class Throughputs(object):
             # fName = 'atmos_{}.dat'.format(int(10*airmass))
             atmosphere = self.get_bandpass(fName)
             self.atmos = atmosphere
-            self.lsst_atmos = self.get_throughputs(atmosphere)
+            # self.lsst_atmos = self.get_throughputs(atmosphere)
 
             if self.aerosol_v != '':
                 self.aerosol_b = True
@@ -334,10 +334,12 @@ class Throughputs(object):
                     self.lsst_system[band].sb,
                     linestyle='--', color=self.filtercolors[band],
                     label='%s - syst' % (band))
+            """
             ax.plot(self.lsst_atmos[band].wavelen,
                     self.lsst_atmos[band].sb,
                     linestyle='-.', color=self.filtercolors[band],
                     label='%s - syst+atm' % (band))
+            """
             if len(self.lsst_atmos_aerosol) > 0:
                 ax.plot(self.lsst_atmos_aerosol[band].wavelen,
                         self.lsst_atmos_aerosol[band].sb,
@@ -394,5 +396,5 @@ class Throughputs(object):
         """
         for band in self.filterlist:
             self.mean_wavelength[band] = np.sum(
-                self.lsst_atmos[band].wavelen*self.lsst_atmos[band].sb)\
-                / np.sum(self.lsst_atmos[band].sb)
+                self.lsst_atmos_aerosol[band].wavelen*self.lsst_atmos_aerosol[band].sb)\
+                / np.sum(self.lsst_atmos_aerosol[band].sb)
