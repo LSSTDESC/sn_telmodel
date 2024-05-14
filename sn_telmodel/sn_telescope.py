@@ -84,7 +84,8 @@ class Zeropoint_airmass:
             tel = get_telescope(tel_dir=tel_dir,
                                 through_dir=through_dir,
                                 atmos_dir=atmos_dir,
-                                tag=self.tag, airmass=airmass,
+                                tag=self.tag, load_components=True,
+                                airmass=airmass,
                                 aerosol=self.aerosol)
             tel.mean_wave()
             for b in 'ugrizy':
@@ -216,7 +217,7 @@ def get_telescope(name='LSST',
                   through_dir='baseline',
                   atmos_dir='atmos',
                   tag='1.9', airmass=1.2, gain=2.5,
-                  aerosol=True, load_components=False):
+                  aerosol='aerosol', load_components=False):
     """
     Function to grab telescope version
 
@@ -360,7 +361,7 @@ class Telescope(Throughputs):
         Throughputs.__init__(self, **kwargs)
         """
         params = ['mag_sky', 'm5', 'FWHMeff', 'Tb',
-                  'Sigmab', 'zp', 'counts_zp', 'Skyb', 'flux_sky']
+                  'Sigmab', 'zp', 'counts_zp', 'adu_zp', 'Skyb', 'flux_sky']
         self.name = name
         self.tel_dir = tel_dir
         self.tag = tag
@@ -430,8 +431,7 @@ class Telescope(Throughputs):
         print(vv, vvb)
         self.data['flux_sky'][band] = vv
 
-        if self.atmos:
-            trans = self.atmosphere[band]
+        trans = self.lsst_atmos_aerosol[band]
 
         from rubin_sim.phot_utils import signaltonoise
         nexp = exptime/30
@@ -537,6 +537,9 @@ class Telescope(Throughputs):
         self.data['counts_zp'][band] = counts*photParams.gain / \
             (photParams.exptime*photParams.nexp)
 
+        self.data['adu_zp'][band] = counts / \
+            (photParams.exptime*photParams.nexp)
+
     def return_value(self, what, band):
         """
         accessor
@@ -621,6 +624,23 @@ class Telescope(Throughputs):
         """
         self.get_zp('zp', filtre)
         return self.return_value('counts_zp', filtre)
+
+    def adu_zp(self, filtre):
+        """
+        counts_zp accessor
+
+        Parameters
+        ----------
+        filtre : str
+            filter to consider.
+
+        Returns
+        -------
+        None.
+
+        """
+        self.get_zp('zp', filtre)
+        return self.return_value('adu_zp', filtre)
 
     def FWHMeff(self, filtre):
         """
