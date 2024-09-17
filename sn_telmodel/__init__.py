@@ -14,5 +14,5 @@ plt.rcParams['font.weight'] = 'bold'
 plt.rcParams['axes.labelweight'] = 'bold'
 plt.rcParams['axes.titleweight'] = 'bold'
 plt.rcParams['figure.titleweight'] = 'bold'
-plt.rcParams['font.family'] = 'Arial'
+# plt.rcParams['font.family'] = 'Arial'
 plt.rcParams['font.size'] = 20
