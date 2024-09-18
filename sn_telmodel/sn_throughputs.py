@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from rubin_sim.phot_utils import Bandpass, Sed
 # from rubin_sim.phot_utils import Sed
 import numpy as np
+import glob
 
 
 class Throughputs(object):
@@ -61,7 +62,7 @@ class Throughputs(object):
 
         for par in ['through_dir', 'atmos_dir', 'atmos', 'aerosol',
                     'telescope_files', 'filterlist', 'wave_min',
-                    'wave_max']:
+                    'wave_max', 'pwv', 'oz']:
             if par in kwargs.keys():
                 params[par] = kwargs[par]
                 # params[par]=str(kwargs[par])
@@ -234,7 +235,7 @@ class Throughputs(object):
                 self.lsst_atmos[f] = self.lsst_system[f]
                 self.lsst_atmos_aerosol[f] = self.lsst_system[f]
 
-    def load_atmosphere(self, airmass=1.2, aerosol='aerosol'):
+    def load_atmosphere_old(self, airmass=1.2, aerosol=''):
         """ Load atmosphere files
         and convolve with transmissions
 
@@ -265,7 +266,53 @@ class Throughputs(object):
                 self.lsst_atmos_aerosol = self.get_throughputs(
                     atmosphere_aerosol)
 
-    def get_bandpass(self, fName):
+    def load_atmosphere(self, airmass=1.2, aerosol=0.0, pwv=4.0, oz=300):
+        """ Load atmosphere files
+        and convolve with transmissions
+
+        Parameters
+        --------------
+        airmass : float,opt
+          airmass value
+          Default : 1.2
+        """
+
+        fName = 'airmass_{}_pwv_{}_oz_{}_aero_{}'.format(
+            int(10*airmass), int(10*pwv), int(oz), int(10*aerosol))
+
+        fName_full = '{}/{}*.dat'.format(self.atmosDir, fName)
+
+        fis = glob.glob(fName_full)
+
+        print('allo', fName_full, fis[0])
+        atmosphere_aerosol = self.get_bandpass(fis[0])
+        self.atmos_aerosol = atmosphere_aerosol
+        self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
+
+        """
+        self.airmass = airmass
+        self.aerosol_v = aerosol
+        self.aerosol_b = False
+
+        if airmass > 0.:
+            airmass_val = str(int(10*airmass))
+            fName = ['atmos']+[airmass_val]
+            # fName = 'atmos_{}.dat'.format(int(10*airmass))
+            atmosphere = self.get_bandpass(fName)
+            self.atmos = atmosphere
+            # self.lsst_atmos = self.get_throughputs(atmosphere)
+
+            if self.aerosol_v != '':
+                self.aerosol_b = True
+                # fName = 'atmos_{}_{}.dat'.format(int(10*airmass), aerosol)
+                fName = ['atmos']+[airmass_val]+[aerosol]
+                atmosphere_aerosol = self.get_bandpass(fName)
+                self.atmos_aerosol = atmosphere_aerosol
+                self.lsst_atmos_aerosol = self.get_throughputs(
+                    atmosphere_aerosol)
+        """
+
+    def get_bandpass_deprecated(self, fName):
         """
         Method to grab the band pass corresponding to data in fName
 
@@ -291,6 +338,28 @@ class Throughputs(object):
             path_atmos = os.path.join(self.atmosDir, fNameb)
             # print('using', fNameb, 'instead')
         atmosphere.read_throughput(path_atmos)
+        atmos = Bandpass(wavelen=atmosphere.wavelen, sb=atmosphere.sb)
+
+        return atmos
+
+    def get_bandpass(self, fName):
+        """
+        Method to grab the band pass corresponding to data in fName
+
+        Parameters
+        ----------
+        fName : str
+            file name to process.
+
+        Returns
+        -------
+        atmos : Bandpass
+            wavelength and throughputs.
+
+        """
+
+        atmosphere = Bandpass()
+        atmosphere.read_throughput(fName)
         atmos = Bandpass(wavelen=atmosphere.wavelen, sb=atmosphere.sb)
 
         return atmos

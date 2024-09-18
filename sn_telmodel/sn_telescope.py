@@ -35,7 +35,7 @@ class Zeropoint_airmass:
     def __init__(self, tel_dir='throughputs',
                  through_dir='baseline',
                  atmos_dir='atmos',
-                 tag='1.9', aerosol=True):
+                 tag='1.9', aerosol=0.0, pwv=4.0, oz=300.):
         """
         class to estimate zp vs airmass and fit (linear) the results
 
@@ -63,6 +63,8 @@ class Zeropoint_airmass:
         self.atmos_dir = atmos_dir
         self.tag = tag
         self.aerosol = aerosol
+        self.pwv = pwv
+        self.oz = oz
 
     def get_data(self):
         """
@@ -86,7 +88,7 @@ class Zeropoint_airmass:
                                 atmos_dir=atmos_dir,
                                 tag=self.tag, load_components=True,
                                 airmass=airmass,
-                                aerosol=self.aerosol)
+                                aerosol=self.aerosol, pwv=self.pwv, oz=self.oz)
             tel.mean_wave()
             for b in 'ugrizy':
                 # b = 'g'
@@ -197,6 +199,8 @@ def load_telescope_from_config(config):
     atmos_dir = config['atmosDir']
     airmass = config['airmass']
     aerosol = config['aerosol']
+    pwv = config['pwv']
+    oz = config['oz']
 
     point_to_tag(tel_dir, tel_tag)
 
@@ -204,10 +208,16 @@ def load_telescope_from_config(config):
     through_dir = '{}/{}'.format(tel_dir, through_dir)
     atmos_dir = '{}/{}'.format(tel_dir, atmos_dir)
 
+    airmass = int(10*float(airmass))
+    aerosol = int(10*float(airmass))
+    pwv = int(10*float(pwv))
+    oz = int(float(oz))
+
+    print('loading telescope')
     tel = get_telescope(name=name, tel_dir=tel_dir,
                         through_dir=through_dir,
                         atmos_dir=atmos_dir, airmass=airmass,
-                        aerosol=aerosol, tag=tel_tag)
+                        aerosol=aerosol, pwv=pwv, oz=oz, tag=tel_tag)
 
     return tel
 
@@ -217,7 +227,8 @@ def get_telescope(name='LSST',
                   through_dir='baseline',
                   atmos_dir='atmos',
                   tag='1.9', airmass=1.2, gain=2.5,
-                  aerosol='aerosol', load_components=False):
+                  pwv=4.0, oz=400,
+                  aerosol=0.0, load_components=False):
     """
     Function to grab telescope version
 
@@ -248,11 +259,12 @@ def get_telescope(name='LSST',
 
     """
 
-    print('Telescope instance', tel_dir)
+    print('Telescope instance', tel_dir, type(
+        aerosol), type(pwv), type(oz), type(airmass))
 
     tel = Telescope(name=name, tel_dir=tel_dir,
                     airmass=airmass, through_dir=through_dir,
-                    atmos_dir=atmos_dir, aerosol=aerosol,
+                    atmos_dir=atmos_dir, aerosol=aerosol, pwv=pwv, oz=oz,
                     load_components=load_components, tag=tag, gain=gain)
 
     return tel
@@ -352,7 +364,7 @@ class Telescope(Throughputs):
 
     """
 
-    def __init__(self, name='unknown', airmass=1., aerosol='',
+    def __init__(self, name='unknown', airmass=1., aerosol=0.0, pwv=4.0, oz=300.,
                  tel_dir='throughputs', tag='1.9', gain=2.5, **kwargs):
         super().__init__(**kwargs)
         """
@@ -378,7 +390,7 @@ class Telescope(Throughputs):
 
         # self.atmos = atmos
 
-        self.load_atmosphere(airmass, aerosol)
+        self.load_atmosphere(airmass, aerosol, pwv, oz)
 
     @get_val_decorb
     def get(self, what, band, exptime):

@@ -43,9 +43,24 @@ def get_trans(am, pwv, oz, tau=0., beta=1.4,
     if emul is None:
         from getObsAtmo.getObsAtmo import ObsAtmo
         emul = ObsAtmo('LSST', 743.0)
-    wl = list(np.arange(300., 1100., 0.1))
+    wl = list(np.arange(300., 1100.5, 0.5))
     transm = emul.GetAllTransparencies(wl, am, pwv, oz, tau=tau, beta=beta)
     df = pd.DataFrame(wl, columns=[colname[0]])
     df[colname[1]] = transm
 
+    # extend down to 200 nm
+    wl = list(np.arange(250., 300., 0.5))
+    dfb = pd.DataFrame(wl, columns=[colname[0]])
+    dfb[colname[1]] = 0.0
+
+    # extend up  to 1200 nm
+    wl = [1200.]
+    dfc = pd.DataFrame(wl, columns=[colname[0]])
+    idx = np.abs(df[colname[0]]-1100.) < 0.01
+    dfc[colname[1]] = df.iloc[-1, colname[1]]
+
+    df = pd.concat((df, dfb))
+    df = pd.concat((df, dfc))
+
+    df = df.sort_values(by=colname[0])
     return df
