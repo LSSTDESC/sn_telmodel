@@ -208,12 +208,11 @@ def load_telescope_from_config(config):
     through_dir = '{}/{}'.format(tel_dir, through_dir)
     atmos_dir = '{}/{}'.format(tel_dir, atmos_dir)
 
-    airmass = int(10*float(airmass))
-    aerosol = int(10*float(airmass))
-    pwv = int(10*float(pwv))
-    oz = int(float(oz))
+    airmass = float(airmass)
+    aerosol = float(aerosol)
+    pwv = float(pwv)
+    oz = float(oz)
 
-    print('loading telescope')
     tel = get_telescope(name=name, tel_dir=tel_dir,
                         through_dir=through_dir,
                         atmos_dir=atmos_dir, airmass=airmass,
@@ -259,8 +258,7 @@ def get_telescope(name='LSST',
 
     """
 
-    print('Telescope instance', tel_dir, type(
-        aerosol), type(pwv), type(oz), type(airmass))
+    print('Telescope instance', tel_dir)
 
     tel = Telescope(name=name, tel_dir=tel_dir,
                     airmass=airmass, through_dir=through_dir,

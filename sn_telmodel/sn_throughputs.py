@@ -284,7 +284,6 @@ class Throughputs(object):
 
         fis = glob.glob(fName_full)
 
-        print('allo', fName_full, fis[0])
         atmosphere_aerosol = self.get_bandpass(fis[0])
         self.atmos_aerosol = atmosphere_aerosol
         self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
