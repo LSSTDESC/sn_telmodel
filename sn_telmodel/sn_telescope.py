@@ -258,7 +258,7 @@ def get_telescope(name='LSST',
 
     """
 
-    print('Telescope instance', tel_dir)
+    # print('Telescope instance', tel_dir)
 
     tel = Telescope(name=name, tel_dir=tel_dir,
                     airmass=airmass, through_dir=through_dir,
