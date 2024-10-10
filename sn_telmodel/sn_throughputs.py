@@ -287,9 +287,8 @@ class Throughputs(object):
         atmosphere_aerosol = self.get_bandpass(fis[0])
         self.atmos_aerosol = atmosphere_aerosol
         self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
-
-        """
         self.airmass = airmass
+        """
         self.aerosol_v = aerosol
         self.aerosol_b = False
 
@@ -414,8 +413,8 @@ class Throughputs(object):
                         linestyle='-', color=self.filtercolors[band],
                         label='%s - syst+atm+aero' % (band))
 
-        ax.plot(self.atmos.wavelen, self.atmos.sb, color='k',
-                label='X =%.1f atmos' % (self.airmass), linestyle='-')
+        # ax.plot(self.atmos.wavelen, self.atmos.sb, color='k',
+        #        label='X =%.1f atmos' % (self.airmass), linestyle='-')
         if len(self.lsst_atmos_aerosol) > 0:
             ax.plot(self.atmos_aerosol.wavelen, self.atmos_aerosol.sb,
                     color='k',
