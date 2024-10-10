@@ -102,7 +102,7 @@ class Zeropoint_airmass:
                 r.append(rb)
 
         res = np.rec.fromrecords(
-            r, names=['airmass', 'band', 'zp', 'zp_adu_sec', 'mean_wavelength'])
+            r, names=['airmass', 'band', 'zp', 'zp_e_sec', 'mean_wavelength'])
 
         return res
 
