@@ -227,7 +227,8 @@ def get_telescope(name='LSST',
                   atmos_dir='atmos',
                   tag='1.9', airmass=1.2, gain=2.5,
                   pwv=4.0, oz=400,
-                  aerosol=0.0, load_components=False):
+                  aerosol=0.0, beta=1.4, pressure=743.,
+                  load_components=False):
     """
     Function to grab telescope version
 
@@ -263,6 +264,7 @@ def get_telescope(name='LSST',
     tel = Telescope(name=name, tel_dir=tel_dir,
                     airmass=airmass, through_dir=through_dir,
                     atmos_dir=atmos_dir, aerosol=aerosol, pwv=pwv, oz=oz,
+                    beta=beta, pressure=pressure,
                     load_components=load_components, tag=tag, gain=gain)
 
     return tel
@@ -362,8 +364,8 @@ class Telescope(Throughputs):
 
     """
 
-    def __init__(self, name='unknown', airmass=1., aerosol=0.0, pwv=4.0, oz=300.,
-                 tel_dir='throughputs', tag='1.9', gain=2.5, **kwargs):
+    def __init__(self, name='unknown', airmass=1., aerosol=0.0, beta=1.4, pwv=4.0, oz=300.,
+                 tel_dir='throughputs', tag='1.9', gain=2.5, pressure=743., **kwargs):
         super().__init__(**kwargs)
         """
         self.name = name
@@ -388,7 +390,7 @@ class Telescope(Throughputs):
 
         # self.atmos = atmos
 
-        self.load_atmosphere(airmass, aerosol, pwv, oz)
+        self.load_atmosphere(name, airmass, aerosol, pwv, oz, beta, pressure)
 
     @get_val_decorb
     def get(self, what, band, exptime):
@@ -458,7 +460,7 @@ class Telescope(Throughputs):
             phot_params=photParams,
             fwhm_eff=self.FWHMeff(band))
 
-    @ get_val_decor
+    @get_val_decor
     def get_inputs(self, what, band):
         """
         decorator to access Tb, Sigmab, mag_sky
@@ -474,13 +476,13 @@ class Telescope(Throughputs):
         myup = self.Calc_Integ_Sed(self.darksky, self.system[band])
         # bpass = self.atmosphere[band]
         # if self.aerosol_b:
-        bpass = self.aerosol[band]
+        bpass = self.lsst_atmos_aerosol[band]
         self.data['Tb'][band] = self.Calc_Integ(bpass)
         self.data['Sigmab'][band] = self.Calc_Integ(self.system[band])
         tt = np.log10(myup/(3631.*self.Sigmab(band)))
         self.data['mag_sky'][band] = -2.5 * tt
 
-    @ get_val_decor
+    @get_val_decor
     def get_zp(self, what, band):
         """
         decorator get zero points
@@ -517,7 +519,8 @@ class Telescope(Throughputs):
         if self.aerosol_b:
             filtre_trans = self.aerosol[band]
         """
-        filtre_trans = self.aerosol[band]
+        filtre_trans = self.lsst_atmos_aerosol[band]
+        # filtre_trans = self.aerosol[band]
         """
         wavelen_min, wavelen_max, wavelen_step = \
             filtre_trans.get_wavelen_limits(None, None, None)

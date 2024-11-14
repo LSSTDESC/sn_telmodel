@@ -4,6 +4,8 @@ from rubin_sim.phot_utils import Bandpass, Sed
 # from rubin_sim.phot_utils import Sed
 import numpy as np
 import glob
+from sn_telmodel.sn_transtools import get_trans
+from getObsAtmo.getObsAtmo import ObsAtmo
 
 
 class Throughputs(object):
@@ -266,7 +268,7 @@ class Throughputs(object):
                 self.lsst_atmos_aerosol = self.get_throughputs(
                     atmosphere_aerosol)
 
-    def load_atmosphere(self, airmass=1.2, aerosol=0.0, pwv=4.0, oz=300):
+    def load_atmosphere_from_file(self, airmass=1.2, aerosol=0.0, pwv=4.0, oz=300):
         """ Load atmosphere files
         and convolve with transmissions
 
@@ -310,6 +312,42 @@ class Throughputs(object):
                     atmosphere_aerosol)
         """
 
+    def load_atmosphere(self, site_name='LSST', airmass=1.2, aerosol=0.0,
+                        pwv=4.0, oz=300, beta=1.4, pressure=743.):
+        """
+        Load atmosphere files
+        and convolve with transmissions
+
+        Parameters
+        ----------
+        site_name : str, optional
+            Site Name. The default is 'LSST'.
+        airmass : float, optional
+            airmass value. The default is 1.2.
+        aerosol : float, optional
+            aerosol value. The default is 0.0.
+        pwv : float, optional
+            precipitable water vapor value. The default is 4.0.
+        oz : float, optional
+            ozone value. The default is 300.
+        beta : float, optional
+            angström parameter. The default is 1.4.
+        pressure : float, optional
+            Pressure value. The default is 743..
+
+        Returns
+        -------
+        None.
+
+        """
+        # emulate LSST
+        emul = ObsAtmo(site_name, pressure)
+        atmosphere_aerosol = self.get_bandpass(emul,
+                                               airmass, aerosol, pwv, oz, beta)
+        self.atmos_aerosol = atmosphere_aerosol
+        self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
+        self.airmass = airmass
+
     def get_bandpass_deprecated(self, fName):
         """
         Method to grab the band pass corresponding to data in fName
@@ -340,7 +378,7 @@ class Throughputs(object):
 
         return atmos
 
-    def get_bandpass(self, fName):
+    def get_bandpass_from_file(self, fName):
         """
         Method to grab the band pass corresponding to data in fName
 
@@ -359,6 +397,40 @@ class Throughputs(object):
         atmosphere = Bandpass()
         atmosphere.read_throughput(fName)
         atmos = Bandpass(wavelen=atmosphere.wavelen, sb=atmosphere.sb)
+
+        return atmos
+
+    def get_bandpass(self, emul, airmass=1.2, aerosol=0.0, pwv=4.0, oz=300, beta=1.4):
+        """
+        Method to get band pass using getObsAtmo
+
+        Parameters
+        ----------
+        emul: getObsAtmo emulator
+             used to estimate transmission
+        airmass : float, optional
+            Airmass value. The default is 1.2.
+        aerosol : float, optional
+            aerosol. The default is 0.0.
+        pwv : float, optional
+            precipitable water vapor. The default is 4.0.
+        oz : float, optional
+            Ozone. The default is 300.
+
+        Returns
+        -------
+        atmos : Bandpass
+            Atmospheric transmission.
+
+        """
+
+        trans = get_trans(airmass, pwv, oz, aerosol, beta,
+                          colname=['wl', 'trans'],
+                          emul=emul)
+        trans = trans.round({'wl': 1, 'trans': 8})
+        atmos = Bandpass(
+            wavelen=np.asarray(trans['wl'].to_list()),
+            sb=np.asarray(trans['trans'].to_list()))
 
         return atmos
 
