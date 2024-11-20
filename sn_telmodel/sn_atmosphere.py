@@ -63,11 +63,11 @@ class Atmos_Transmission:
         if site_name != self.site_name or pressure != self.pressure:
             print('there man', site_name, pressure)
             self.emul = ObsAtmo(site_name, pressure)
-        atmosphere_aerosol = self.get_bandpass_obsatmo(self.emul,
-                                                       airmass, aerosol,
-                                                       pwv, oz, beta)
-        self.atmos_aerosol = atmosphere_aerosol
-        self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
+        self.atmosphere = self.get_bandpass_obsatmo(self.emul,
+                                                    airmass, aerosol,
+                                                    pwv, oz, beta)
+        #self.atmos_aerosol = atmosphere_aerosol
+        #self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
         self.airmass = airmass
 
     def get_bandpass_obsatmo(self, emul, airmass=1.2, aerosol=0.0,
@@ -150,11 +150,16 @@ class Atmos_Transmission:
 
         return atmos
 
-    def plot_atmospheric_transmission(self, fig=None, ax=None):
-
-        import matplotlib.pyplot as plt
+    def plot_atmospheric_transmission(self, plt, fig=None, ax=None):
 
         if fig is None:
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=(12, 8))
 
         ax.plot(self.atmosphere.wavelen, self.atmosphere.sb)
+
+        ax.set_xlabel('Wavelength (nm)')
+        ax.set_ylabel('Sb (0-1)')
+        # ax.set_title(figtit)
+        ax.set_ylim([0.0, 1.])
+        ax.grid(visible=True)
+        # ax.legend()
