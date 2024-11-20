@@ -116,6 +116,11 @@ class Atmos_Transmission:
         #self.atmos_aerosol = atmosphere_aerosol
         #self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
         self.airmass = airmass
+        self.aerosol = aerosol
+        self.pwv = pwv
+        self.oz = oz
+        self.beta = beta
+        self.pressure = pressure
 
     def get_bandpass_obsatmo(self, emul, airmass=1.2, aerosol=0.0,
                              pwv=4.0, oz=300, beta=1.4):
@@ -167,13 +172,16 @@ class Atmos_Transmission:
 
         fName_full = '{}/{}*.dat'.format(self.atmos_dir, fName)
 
-        print('there man', fName_full)
-
         fis = glob.glob(fName_full)
 
         self.atmosphere = self.get_bandpass_from_file(fis[0])
         #self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
         self.airmass = airmass
+        self.aerosol = 0.04
+        self.pwv = 4.0
+        self.oz = 300.
+        self.beta = 1.4
+        self.pressure = 743.
 
     def get_bandpass_from_file(self, fName):
         """
@@ -198,7 +206,8 @@ class Atmos_Transmission:
         return atmos
 
     def plot_atmospheric_transmission(self, plt, fig=None, ax=None,
-                                      figtit='Atmospheric transmission'):
+                                      figtit='Atmospheric transmission',
+                                      label='', linestyle='solid', color='b'):
         """
         Method to plot atmospheric transmission
 
@@ -220,11 +229,14 @@ class Atmos_Transmission:
         if fig is None:
             fig, ax = plt.subplots(figsize=(12, 8))
 
-        ax.plot(self.atmosphere.wavelen, self.atmosphere.sb)
+        ax.plot(self.atmosphere.wavelen, self.atmosphere.sb, label=label,
+                color=color, linestyle=linestyle)
 
         ax.set_xlabel('Wavelength (nm)')
         ax.set_ylabel('Sb (0-1)')
-        ax.set_title(figtit)
+        if figtit != '':
+            ax.set_title(figtit)
         ax.set_ylim([0.0, 1.])
         ax.grid(visible=True)
-        # ax.legend()
+        if label != '':
+            ax.legend()
