@@ -14,7 +14,27 @@ import glob
 
 class Atmos_Transmission:
     def __init__(self, site_name='LSST', pressure=743.,
-                 atmos_dir='throughput_v1.9/atmos', atmos_type='obsatmo'):
+                 atmos_dir='throughputs_1.9/atmos', atmos_type='obsatmo'):
+        """
+        class to estimate atmospheric transmission
+
+        Parameters
+        ----------
+        site_name : str, optional
+            Site name. The default is 'LSST'.
+        pressure : float, optional
+            Pressure. The default is 743..
+        atmos_dir : str, optional
+            Location dir of atmosphere files. 
+            The default is 'throughput_v1.9/atmos'.
+        atmos_type : str, optional
+            Transmission estimation method . The default is 'obsatmo'.
+
+        Returns
+        -------
+        None.
+
+        """
 
         self.site_name = site_name
         self.pressure = pressure
@@ -26,10 +46,38 @@ class Atmos_Transmission:
 
     def load_atmosphere(self, site_name='LSST', airmass=1.2, aerosol=0.0,
                         pwv=4.0, oz=300, beta=1.4, pressure=743.):
+        """
+        Method to load atmospheric transmission
+
+        Parameters
+        ----------
+        site_name : str, optional
+            Site name. The default is 'LSST'.
+        airmass : float, optional
+            airmass. The default is 1.2.
+        aerosol : float, optional
+            aerosol. The default is 0.0.
+        pwv : float, optional
+            precipitable water vapor. The default is 4.0.
+        oz : float, optional
+            ozone. The default is 300.
+        beta : float, optional
+            Angstrom exponent. The default is 1.4.
+        pressure : float, optional
+            pressure. The default is 743..
+
+        Returns
+        -------
+        None.
+
+        """
 
         if self.atmos_type == 'obsatmo':
             self.load_atmosphere_obsatmo(site_name, airmass, aerosol,
                                          pwv, oz, beta, pressure)
+
+        if self.atmos_type == 'from_file':
+            self.load_atmosphere_from_file(airmass)
 
     def load_atmosphere_obsatmo(self, site_name='LSST', airmass=1.2, aerosol=0.0,
                                 pwv=4.0, oz=300, beta=1.4, pressure=743.):
@@ -61,7 +109,6 @@ class Atmos_Transmission:
         """
         # emulate LSST
         if site_name != self.site_name or pressure != self.pressure:
-            print('there man', site_name, pressure)
             self.emul = ObsAtmo(site_name, pressure)
         self.atmosphere = self.get_bandpass_obsatmo(self.emul,
                                                     airmass, aerosol,
@@ -150,7 +197,25 @@ class Atmos_Transmission:
 
         return atmos
 
-    def plot_atmospheric_transmission(self, plt, fig=None, ax=None):
+    def plot_atmospheric_transmission(self, plt, fig=None, ax=None,
+                                      figtit='Atmospheric transmission'):
+        """
+        Method to plot atmospheric transmission
+
+        Parameters
+        ----------
+        plt : matplotlib.pyplot
+            To make the plot.
+        fig : matplotlib figure, optional
+            Figure for the plot. The default is None.
+        ax : matplotlib axis, optional
+            Axis for the plot. The default is None.
+
+        Returns
+        -------
+        None.
+
+        """
 
         if fig is None:
             fig, ax = plt.subplots(figsize=(12, 8))
@@ -159,7 +224,7 @@ class Atmos_Transmission:
 
         ax.set_xlabel('Wavelength (nm)')
         ax.set_ylabel('Sb (0-1)')
-        # ax.set_title(figtit)
+        ax.set_title(figtit)
         ax.set_ylim([0.0, 1.])
         ax.grid(visible=True)
         # ax.legend()
