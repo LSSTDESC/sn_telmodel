@@ -112,6 +112,8 @@ class Throughputs(object):
         # self.Load_Telescope()
 
         # self.mean_wave()
+        # emulate LSST
+        self.emul = ObsAtmo('LSST', 743)
 
     @property
     def system(self):
@@ -268,7 +270,8 @@ class Throughputs(object):
                 self.lsst_atmos_aerosol = self.get_throughputs(
                     atmosphere_aerosol)
 
-    def load_atmosphere_from_file(self, airmass=1.2, aerosol=0.0, pwv=4.0, oz=300):
+    def load_atmosphere_from_file(self, name, airmass=1.2, aerosol=0.0,
+                                  pwv=4.0, oz=300, beta=1.4, pressure=743):
         """ Load atmosphere files
         and convolve with transmissions
 
@@ -282,11 +285,15 @@ class Throughputs(object):
         fName = 'airmass_{}_pwv_{}_oz_{}_aero_{}'.format(
             int(10*airmass), int(10*pwv), int(oz), int(10*aerosol))
 
+        fName = 'atmos_{}_aerosol'.format(int(10*airmass))
+
         fName_full = '{}/{}*.dat'.format(self.atmosDir, fName)
+
+        print('there man', fName_full)
 
         fis = glob.glob(fName_full)
 
-        atmosphere_aerosol = self.get_bandpass(fis[0])
+        atmosphere_aerosol = self.get_bandpass_from_file(fis[0])
         self.atmos_aerosol = atmosphere_aerosol
         self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
         self.airmass = airmass
@@ -341,8 +348,10 @@ class Throughputs(object):
 
         """
         # emulate LSST
-        emul = ObsAtmo(site_name, pressure)
-        atmosphere_aerosol = self.get_bandpass(emul,
+        if site_name != 'LSST' or pressure != 743.:
+            print('there man', site_name, pressure)
+            self.emul = ObsAtmo(site_name, pressure)
+        atmosphere_aerosol = self.get_bandpass(self.emul,
                                                airmass, aerosol, pwv, oz, beta)
         self.atmos_aerosol = atmosphere_aerosol
         self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
