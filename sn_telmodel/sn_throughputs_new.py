@@ -111,7 +111,8 @@ class Throughputs(Telescope, Atmos_Transmission):
         self.throughputs = self.get_throughputs(self.atmosphere)
 
         # throughgputs data
-        self.params = ['mag_sky', 'm5', 'FWHMeff', 'Tb',
+        self.data = {}
+        self.params = ['mag_sky', 'm5', 'Tb',
                        'Sigmab', 'zp', 'counts_zp', 'adu_zp',
                        'Skyb', 'flux_sky']
         self.reset_data()
@@ -133,7 +134,6 @@ class Throughputs(Telescope, Atmos_Transmission):
 
         """
 
-        self.data = {}
         for par in self.params:
             self.data[par] = {}
 
@@ -165,10 +165,11 @@ class Throughputs(Telescope, Atmos_Transmission):
 
         """
 
+        # load new atmosphere (update self.atmosphere)
         self.load_atmosphere(site_name, airmass, aerosol,
                              pwv, oz, beta, pressure)
 
-        # get throughputs
+        # get new throughputs
         self.throughputs = self.get_throughputs(self.atmosphere)
 
     def get_throughputs(self, bandpass):
@@ -795,6 +796,21 @@ class Throughputs(Telescope, Atmos_Transmission):
             return np.asarray(r)
 
     def etc(self, exptime=30., plateScale=0.2):
+        """
+        Method to print the throughputs parameters
+
+        Parameters
+        ----------
+        exptime : float, optional
+            exposure time. The default is 30..
+        plateScale : float, optional
+            plate scale ("2). The default is 0.2.
+
+        Returns
+        -------
+        None.
+
+        """
 
         import pandas as pd
         #exptime = 30
@@ -811,14 +827,16 @@ class Throughputs(Telescope, Atmos_Transmission):
         df['ADU_zp'] = [self.adu_zp(b) for b in bands]
         df['msky'] = [self.mag_sky(b) for b in bands]
         df['flux_sky'] = [self.flux_sky(b, exptime) for b in bands]
-        df['flux_sky_mag'] = 10**(-0.4*(df['flux_sky']-df['zp']))*plateScale**2
+        df['flux_sky_from_mag'] = 10**(-0.4 *
+                                       (df['msky']-df['zp']))*plateScale**2
+        #df['flux_sky_mag'] = -2.5*np.log10(df['flux_sky'])+df['zp']
         df['FWHMeff'] = [self.FWHMeff(b) for b in bands]
         df['m5'] = [self.m5(b, exptime) for b in bands]
 
         df = df.rename(columns={"zp": "zp (AB)",
                                 "flux_zp": "flux_zp (pe/s/pix)",
                                 "flux_sky": "flux_sky (pe/s/pix)",
-                                "flux_sky_mag": "flux_sky_mag (pe/s/pix)",
+                                "flux_sky_from_mag": "flux_sky_from_mag (pe/s/pix)",
                                 "FWHMeff": "FWHMEff ('')",
                                 "m5": "m5 (exptime: {} s)".format(exptime),
                                 "msky": "msky (/\"2)"})
