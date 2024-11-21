@@ -100,7 +100,7 @@ class Telescope:
         for fi in self.tel_optical_files:
             vv = Bandpass()
             path_vv = os.path.join(self.tel_dir, fi)
-            print('reading', path_vv)
+            #print('reading', path_vv)
             vv.read_throughput(path_vv)
             nname = fi.split('.dat')[0]
             self.optical[nname] = vv
@@ -133,7 +133,7 @@ class Telescope:
             telfiles = self.tel_optical_files + \
                 [self.tel_filter_files[index[0]]]
 
-            print(f, telfiles)
+            #print(f, telfiles)
             self.tel_trans[f].read_throughput_list(telfiles,
                                                    root_dir=self.tel_dir,
                                                    wavelen_min=self.tel_wave_min,
