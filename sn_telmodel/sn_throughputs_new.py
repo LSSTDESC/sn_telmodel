@@ -850,7 +850,7 @@ class Throughputs(Telescope, Atmos_Transmission):
     def mean_wave(self):
         """ Estimate mean wave
         """
-        for band in self.filterlist:
+        for band in self.filter_list:
             self.mean_wavelength[band] = np.sum(
-                self.lsst[band].wavelen*self.lsst[band].sb)\
-                / np.sum(self.lsst[band].sb)
+                self.throughputs[band].wavelen*self.throughputs[band].sb)\
+                / np.sum(self.throughputs[band].sb)
