@@ -124,6 +124,9 @@ class Throughputs(Telescope, Atmos_Transmission):
         self.data['FWHMeff'] = dict(
             zip('ugrizy', [0.92, 0.87, 0.83, 0.80, 0.78, 0.76]))
 
+        # mean wavelength filters
+        self.mean_wavelength = {}
+
     def reset_data(self):
         """
         Method to reset throughputs (zp, etc) data
@@ -813,7 +816,7 @@ class Throughputs(Telescope, Atmos_Transmission):
         """
 
         import pandas as pd
-        #exptime = 30
+        # exptime = 30
         # plateScale = 0.2  # pixel size ''
         bands = self.filter_list
         df = pd.DataFrame(list(bands), columns=['band'])
@@ -829,7 +832,7 @@ class Throughputs(Telescope, Atmos_Transmission):
         df['flux_sky'] = [self.flux_sky(b, exptime) for b in bands]
         df['flux_sky_from_mag'] = 10**(-0.4 *
                                        (df['msky']-df['zp']))*plateScale**2
-        #df['flux_sky_mag'] = -2.5*np.log10(df['flux_sky'])+df['zp']
+        # df['flux_sky_mag'] = -2.5*np.log10(df['flux_sky'])+df['zp']
         df['FWHMeff'] = [self.FWHMeff(b) for b in bands]
         df['m5'] = [self.m5(b, exptime) for b in bands]
 
@@ -843,3 +846,11 @@ class Throughputs(Telescope, Atmos_Transmission):
         df = df.round(2)
         pd.set_option('display.colheader_justify', 'center')
         print(df.to_string(index=False))
+
+    def mean_wave(self):
+        """ Estimate mean wave
+        """
+        for band in self.filterlist:
+            self.mean_wavelength[band] = np.sum(
+                self.lsst[band].wavelen*self.lsst[band].sb)\
+                / np.sum(self.lsst[band].sb)
