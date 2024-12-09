@@ -1,17 +1,14 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Nov 20 18:50:53 2024
-
-@author: philippe.gris@clermont.in2p3.fr
-"""
 from functools import wraps
 from scipy.constants import *
+import numpy as np
 from rubin_sim.phot_utils import photometric_parameters
 from rubin_sim.phot_utils import Bandpass, Sed
-import numpy as np
-from sn_telmodel.sn_telescope_new import Telescope
-from sn_telmodel.sn_atmosphere import Atmos_Transmission
+from sn_telmodel.sn_throughputs import Throughputs
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
+# import matplotlib.pyplot as plt
+# import math
 
 # decorator to access parameters of the class
 
@@ -34,272 +31,366 @@ def get_val_decorb(func):
     return func_decob
 
 
-class Throughputs(Telescope, Atmos_Transmission):
-    def __init__(self, tel_dir='throughputs_1.9/baseline',
-                 tel_optical_files=['detector.dat', 'lens1.dat',
-                                    'lens2.dat', 'lens3.dat',
-                                    'm1.dat', 'm2.dat', 'm3.dat'],
-                 tel_filter_files=['filter_u.dat', 'filter_g.dat',
-                                   'filter_r.dat', 'filter_i.dat',
-                                   'filter_z.dat', 'filter_y.dat'],
-                 tel_wave_min=300.,
-                 tel_wave_max=1150.,
-                 filter_colors=dict(zip(['u', 'g', 'r', 'i', 'z', 'y'],
-                                        ['b', 'c', 'g', 'y', 'r', 'm'])),
-                 site_name='LSST', pressure=743.,
-                 atmos_dir='throughputs_1.9/atmos',
-                 atmos_type='obsatmo',
-                 darksky_file='throughputs_1.9/baseline/darksky.dat',
-                 gain=2.5):
+class Zeropoint_airmass:
+    def __init__(self, tel_dir='throughputs',
+                 through_dir='baseline',
+                 atmos_dir='atmos',
+                 tag='1.9', aerosol=0.0, pwv=4.0, oz=300.):
         """
-        Throughputs class - inheritance from Telescope and Atmos_Transmission
+        class to estimate zp vs airmass and fit (linear) the results
 
         Parameters
         ----------
         tel_dir : str, optional
-            input files directory. The default is 'throughputs_1.9/baseline'.
-        tel_optical_files : list(str), optional
-            List of optical components. The default is
-                                        ['detector.dat', 'lens1.dat',
-                                         'lens2.dat', 'lens3.dat',
-                                         'm1.dat', 'm2.dat', 'm3.dat'].
-        tel_filter_files : list(str), optional
-            List of filter files. The default is
-                                        ['filter_u.dat', 'filter_g.dat',
-                                         'filter_r.dat', 'filter_i.dat',
-                                        'filter_z.dat', 'filter_y.dat'].
-        tel_wave_min : float, optional
-            Min wave length. The default is 300..
-        tel_wave_max : float, optional
-            Max wavelength. The default is 1150..
-        filter_colors : list(str), optional
-            List of filter colors (for display). The default is
-                dict(zip(['u', 'g', 'r', 'i', 'z', 'y'],                                     
-                         ['b', 'c', 'g', 'y', 'r', 'm'])).
-        site_name : str, optional
-             Site name. The default is 'LSST'.
-        pressure : float, optional
-             Pressure. The default is 743..
+            telescope main dir. The default is 'throughputs'.
+        through_dir : str, optional
+            throughputs dir. The default is 'throughputs/baseline'.
         atmos_dir : str, optional
-             Location dir of atmosphere files.
-             The default is 'throughput_v1.9/atmos'.
-        atmos_type : str, optional
-             Transmission estimation method . The default is 'obsatmo'. 
-        darksky_file: str, optional
-            dark sky file. The default is 'throughputs_1.9/baseline/darksky.dat'
-        gain: float, optional
-            electronic gain. The default is 2.5.
+            dir for atmos files. The default is 'throughputs/atmos'.
+        tag : str, optional
+            throughputs tag. The default is '1.9'.
+        aerosol : bool, optional
+            to include aerosol. The default is True.
 
         Returns
         -------
         None.
 
         """
-        Telescope.__init__(self, tel_dir, tel_optical_files,
-                           tel_filter_files, tel_wave_min, tel_wave_max,
-                           filter_colors)
-        Atmos_Transmission.__init__(self, site_name, pressure, atmos_dir,
-                                    atmos_type)
 
-        # load darksky
-        self.load_darksky(darksky_file)
+        self.tel_dir = tel_dir
+        self.through_dir = through_dir
+        self.atmos_dir = atmos_dir
+        self.tag = tag
+        self.aerosol = aerosol
+        self.pwv = pwv
+        self.oz = oz
 
-        # load_atmosphere
-        self.load_atmosphere()
+    def get_data(self):
+        """
+        Method to estimate zp vs airmass
 
-        # get throughputs
-        self.throughputs = self.get_throughputs(self.atmosphere)
+        Returns
+        -------
+        res : numpy array
+            columns: filter, zp, airmass, mean_wave.
 
-        # throughgputs data
+        """
+
+        r = []
+        point_to_tag(self.tel_dir, self.tag)
+        tel_dir = '{}_{}'.format(self.tel_dir, self.tag)
+        through_dir = '{}/{}'.format(tel_dir, self.through_dir)
+        atmos_dir = '{}/{}'.format(tel_dir, self.atmos_dir)
+        for airmass in np.arange(1., 2.51, 0.1):
+            tel = get_telescope(tel_dir=tel_dir,
+                                through_dir=through_dir,
+                                atmos_dir=atmos_dir,
+                                tag=self.tag, load_components=True,
+                                airmass=airmass,
+                                aerosol=self.aerosol, pwv=self.pwv, oz=self.oz)
+            tel.mean_wave()
+            for b in 'ugrizy':
+                # b = 'g'
+                # print(airmass, b, tel.zp(b))
+                mean_wave = tel.mean_wavelength[b]
+                rb = [airmass]
+                rb.append(b)
+                rb.append(tel.zp(b))
+                rb.append(tel.counts_zp(b))
+                rb.append(mean_wave)
+                r.append(rb)
+
+        res = np.rec.fromrecords(
+            r, names=['airmass', 'band', 'zp', 'zp_e_sec', 'mean_wavelength'])
+
+        return res
+
+    def fitfunc(self, x, a, b):
+        """
+        Function used for fitting
+
+        Parameters
+        ----------
+        x : array(float)
+            x-axis var.
+        a : float
+            slope.
+        b : float
+            intercept.
+
+        Returns
+        -------
+        array
+            list of values.
+
+        """
+
+        return a*x+b
+
+    def fit(self, res, xvar='airmass', yvar='zp'):
+        """
+        Function to fit yvar vs xvar for all bands.
+
+        Parameters
+        ----------
+        res : array
+            data to fit.
+        xvar : str, optional
+            x-axis var. The default is 'airmass'.
+        yvar : str, optional
+            y-axis var. The default is 'zp'.
+
+        Returns
+        -------
+        res : array
+            slop and intercep from the fit per band.
+            added mean_wavelength.
+
+        """
+
+        from scipy.optimize import curve_fit
+        r = []
+        for b in 'ugrizy':
+            idx = res['band'] == b
+            sel = res[idx]
+            xdata = sel[xvar]
+            ydata = sel[yvar]
+            popt, pcov = curve_fit(self.fitfunc, xdata, ydata)
+            mean_wave = np.mean(sel['mean_wavelength'])
+            r.append((b, popt[0], popt[1], mean_wave))
+
+        res = np.rec.fromrecords(
+            r, names=['band', 'slope', 'intercept', 'mean_wavelength'])
+
+        return res
+
+    def get_fit_params(self):
+
+        # get data
+        data = self.get_data()
+
+        # fit these data
+        fitdata = self.fit(data)
+
+        return fitdata
+
+
+def load_telescope_from_config(config):
+    """
+    Function to load telescope model
+
+    Parameters
+    ----------
+    config : dict
+        configuration parameters.
+
+    Returns
+    -------
+    tel : Telescope class (sn_telmodel.sn_telescope)
+        Telescope model.
+
+    """
+
+    name = config['name']
+    tel_dir = config['telescope']['dir']
+    tel_tag = config['telescope']['tag']
+    through_dir = config['throughputDir']
+    atmos_dir = config['atmosDir']
+    airmass = config['airmass']
+    aerosol = config['aerosol']
+    pwv = config['pwv']
+    oz = config['oz']
+
+    point_to_tag(tel_dir, tel_tag)
+
+    tel_dir = '{}_{}'.format(tel_dir, tel_tag)
+    through_dir = '{}/{}'.format(tel_dir, through_dir)
+    atmos_dir = '{}/{}'.format(tel_dir, atmos_dir)
+
+    airmass = float(airmass)
+    aerosol = float(aerosol)
+    pwv = float(pwv)
+    oz = float(oz)
+
+    tel = get_telescope(name=name, tel_dir=tel_dir,
+                        through_dir=through_dir,
+                        atmos_dir=atmos_dir, airmass=airmass,
+                        aerosol=aerosol, pwv=pwv, oz=oz, tag=tel_tag)
+
+    return tel
+
+
+def get_telescope(name='LSST',
+                  tel_dir='throughputs',
+                  through_dir='baseline',
+                  atmos_dir='atmos',
+                  tag='1.9', airmass=1.2, gain=2.5,
+                  pwv=4.0, oz=400,
+                  aerosol=0.0, beta=1.4, pressure=743.,
+                  load_components=False):
+    """
+    Function to grab telescope version
+
+    Parameters
+    ----------
+    name : str, optional
+       Telescope name. The default is 'LSST'.
+    tel_dir : str, optional
+       Main tel directory. The default is 'throughputs'.
+    through_dir : str, optional
+        Throughput directory. The default is 'throughputs/baseline'.
+    atmos_dir : str, optional
+        Atmosphere directory. The default is 'throughputs/atmos'.
+    tag : str, optional
+        Tag version for throughputs. The default is '1.9'.
+    airmass : float, optional
+        airmass value for throughputs. The default is 1.2.
+    gain: float, optional.
+         electronic gain. The default is 2.5
+    aerosol : bool, optional
+        add aerosol effect. The default is True.
+    load_components : bool, optional
+        To load all the components (one by one). The default is False.
+    Returns
+    -------
+    tela : TYPE
+        DESCRIPTION.
+
+    """
+
+    # print('Telescope instance', tel_dir)
+
+    tel = Telescope(name=name, tel_dir=tel_dir,
+                    airmass=airmass, through_dir=through_dir,
+                    atmos_dir=atmos_dir, aerosol=aerosol, pwv=pwv, oz=oz,
+                    beta=beta, pressure=pressure,
+                    load_components=load_components, tag=tag, gain=gain)
+
+    return tel
+
+
+def point_to_tag(tel_dir, tag):
+    """
+    Function to point to a given tel tag version
+
+    Parameters
+    ----------
+    tel_dir : str
+        Main telescope dir.
+    tag : str
+        Tag throughputs version.
+
+    Returns
+    -------
+    None.
+
+    """
+
+    import os
+    path = os.getcwd()
+    throughputs_dir = '{}_{}'.format(tel_dir, tag)
+    if not os.path.isdir(throughputs_dir):
+        cmd = 'git clone https://github.com/lsst/{} {}_{}'.format(
+            tel_dir, tel_dir, tag)
+        os.system(cmd)
+
+        os.chdir(throughputs_dir)
+        cmd = 'git checkout tags/{}'.format(tag)
+        os.system(cmd)
+        os.chdir(path)
+
+
+class Telescope(Throughputs):
+    """ Telescope class
+    inherits from Throughputs
+    estimate quantities defined in LSE-40
+
+    The following quantities are accessible:
+
+    mag_sky: sky magnitude
+
+    m5: 5-sigma depth
+
+    Sigmab: see eq. (36) of LSE-40
+
+    zp: see eq. (43) of LSE-40
+
+    counts_zp:
+
+    Skyb: see eq. (40) of LSE-40
+
+    flux_sky:
+
+
+    Parameters
+    -------------
+    through_dir : str, opt
+       throughput directory
+       Default : LSST_THROUGHPUTS_BASELINE
+    atmos_dir : str, opt
+       directory of atmos files
+       Default : THROUGHPUTS_DIR
+    telescope_files : list(str),opt
+       list of of throughput files
+       Default : ['detector.dat', 'lens1.dat','lens2.dat',
+           'lens3.dat','m1.dat', 'm2.dat', 'm3.dat']
+    filterlist: list(str), opt
+       list of filters to consider
+       Default : 'ugrizy'
+    wave_min : float, opt
+        min wavelength for throughput
+        Default : 300
+    wave_max : float, opt
+        max wavelength for throughput
+        Default : 1150
+    atmos : bool, opt
+         to include atmosphere affects
+         Default : True
+    aerosol : bool, opt
+         to include aerosol effects
+         Default : True
+    airmass : float, opt
+         airmass value
+         Default : 1.
+
+    Returns
+    ---------
+    Accessible throughputs (per band, from Throughput class):
+    lsst_system: system throughput (lens+mirrors+filters)
+    lsst_atmos: lsst_system+atmosphere
+    lsst_atmos_aerosol: lsst_system+atmosphere+aerosol
+
+
+    """
+
+    def __init__(self, name='unknown', airmass=1., aerosol=0.0, beta=1.4, pwv=4.0, oz=300.,
+                 tel_dir='throughputs', tag='1.9', gain=2.5, pressure=743., **kwargs):
+        super().__init__(**kwargs)
+        """
+        self.name = name
+
+        Throughputs.__init__(self, **kwargs)
+        """
+        params = ['mag_sky', 'm5', 'FWHMeff', 'Tb',
+                  'Sigmab', 'zp', 'counts_zp', 'adu_zp', 'Skyb', 'flux_sky']
+        self.name = name
+        self.tel_dir = tel_dir
+        self.tag = tag
         self.data = {}
-        self.params = ['mag_sky', 'm5', 'Tb',
-                       'Sigmab', 'zp', 'counts_zp', 'adu_zp',
-                       'Skyb', 'flux_sky']
-        self.reset_data()
-
-        # electronic gain
         self.gain = gain
+        for par in params:
+            self.data[par] = {}
 
-        # seeing
         self.data['FWHMeff'] = dict(
             zip('ugrizy', [0.92, 0.87, 0.83, 0.80, 0.78, 0.76]))
 
-        # mean wavelength filters
-        self.mean_wavelength = {}
+        # self.data['FWHMeff'] = dict(
+        #    zip('ugrizy', [0.77, 0.73, 0.70, 0.67, 0.65, 0.63]))
 
-    def reset_data(self):
-        """
-        Method to reset throughputs (zp, etc) data
+        # self.atmos = atmos
 
-        Returns
-        -------
-        None.
-
-        """
-
-        for par in self.params:
-            self.data[par] = {}
-
-    def new_atmosphere(self, site_name='LSST', airmass=1.2, aerosol=0.0,
-                       pwv=4.0, oz=300, beta=1.4, pressure=743.):
-        """
-        Method to load atmospheric transmission
-
-        Parameters
-        ----------
-        site_name : str, optional
-            Site name. The default is 'LSST'.
-        airmass : float, optional
-            airmass. The default is 1.2.
-        aerosol : float, optional
-            aerosol. The default is 0.0.
-        pwv : float, optional
-            precipitable water vapor. The default is 4.0.
-        oz : float, optional
-            ozone. The default is 300.
-        beta : float, optional
-            Angstrom exponent. The default is 1.4.
-        pressure : float, optional
-            pressure. The default is 743..
-
-        Returns
-        -------
-        None.
-
-        """
-
-        # load new atmosphere (update self.atmosphere)
-        self.load_atmosphere(site_name, airmass, aerosol,
-                             pwv, oz, beta, pressure)
-
-        # get new throughputs
-        self.throughputs = self.get_throughputs(self.atmosphere)
-
-    def get_throughputs(self, bandpass):
-        """
-        Method to get the resulting throughputs=system*bandpass
-
-        Parameters
-        ----------
-        bandpass : Bandpass
-            Wavelength and sb.
-
-        Returns
-        -------
-        through : dict
-            Resulting troughput (system*filter).
-
-        """
-
-        through = {}
-        for f in self.filter_list:
-            wavelen, sb = self.tel_trans[f].multiply_throughputs(
-                bandpass.wavelen, bandpass.sb)
-            through[f] = Bandpass(wavelen=wavelen, sb=sb)
-
-        return through
-
-    def plot_throughputs(self, plt, fig=None, ax=None):
-        """
-        To plot the throughputs
-
-        Parameters
-        ----------
-        plt : matplotlib.pyplot
-            plot lib.
-        fig : matplotlib figure, optional
-            Figure for the plot. The default is None.
-        ax : matplotlib axis, optional
-            Axis for the plot. The default is None.
-
-        Returns
-        -------
-        None.
-
-        """
-
-        # colors=['b','g','r','m','c',[0.8,0,0]]
-        # style = [',', ',', ',', ',']
-
-        if fig is None:
-            fig, ax = plt.subplots(figsize=(12, 8))
-
-        for i, band in enumerate(self.filter_list):
-
-            ax.plot(self.tel_trans[band].wavelen,
-                    self.tel_trans[band].sb,
-                    linestyle='--', color=self.filter_colors[band],
-                    label='%s - tel' % (band))
-
-            ax.plot(self.throughputs[band].wavelen,
-                    self.throughputs[band].sb,
-                    linestyle='-',
-                    color=self.filter_colors[band],
-                    label='%s - tel+atmos' % (band))
-
-        # ax.plot(self.atmos.wavelen, self.atmos.sb, color='k',
-        #        label='X =%.1f atmos' % (self.airmass), linestyle='-')
-
-        ax.plot(self.atmosphere.wavelen, self.atmosphere.sb,
-                color='k',
-                label='atmos (airmass={})'.format(self.airmass),
-                linestyle='--')
-        # plt.legend(loc=(0.85, 0.1), fontsize='smaller',
-        # fancybox=True, numpoints=1)
-
-        ax.legend(loc=(0.82, 0.1), fancybox=True, numpoints=1)
-
-        ax.set_xlabel('Wavelength (nm)')
-        ax.set_ylabel('Sb (0-1)')
-        ax.set_title('System throughput')
-        ax.grid(visible=True)
-
-    def load_darksky(self, darksky_file):
-        """
-        Method to load the dark sky file
-
-        Parameters
-        ----------
-        darksky_file : str
-            dark sky file.
-
-        Returns
-        -------
-        None.
-
-        """
-
-        self.darksky = Sed()
-        self.darksky.read_sed_flambda(darksky_file)
-
-    def plot_darksky(self, plt, fig=None, ax=None):
-        """
-        Method to plot the dark sky sed
-
-        Parameters
-        ----------
-        plt : matplotlib pyplot
-            plot lib.
-        fig : matplotlib figure, optional
-            plot figure. The default is None.
-        ax : matplotlib axis, optional
-            plot axis. The default is None.
-
-        Returns
-        -------
-        None.
-
-        """
-
-        if fig is None:
-            fig, ax = plt.subplots(figsize=(12, 8))
-
-        ax.plot(self.darksky.wavelen,
-                self.darksky.flambda, 'k:', linestyle='-')
-        ax.set_xlabel('Wavelength (nm)')
-        ax.set_ylabel('flambda (ergs/cm$^2$/s/nm)')
-        fig.suptitle('Dark Sky SED')
-        ax.grid(visible=True)
+        self.load_atmosphere(name, airmass, aerosol, pwv, oz, beta, pressure)
 
     @get_val_decorb
     def get(self, what, band, exptime):
@@ -314,7 +405,8 @@ class Throughputs(Telescope, Atmos_Transmission):
           filter
 
         """
-        filter_trans = self.throughputs[band]
+        filter_trans = self.system[band]
+        # filter_trans = self.lsst_atmos_aerosol[band]
         # wavelen_min, wavelen_max, wavelen_step = \
         #    filter_trans.get_wavelen_limits(None, None, None)
         wavelen_min = np.min(filter_trans.wavelen)
@@ -351,7 +443,7 @@ class Throughputs(Telescope, Atmos_Transmission):
         print(vv, vvb)
         self.data['flux_sky'][band] = vv
 
-        trans = self.throughputs[band]
+        trans = self.lsst_atmos_aerosol[band]
 
         from rubin_sim.phot_utils import signaltonoise
         nexp = exptime/30
@@ -381,12 +473,12 @@ class Throughputs(Telescope, Atmos_Transmission):
           filter
 
         """
-        myup = self.Calc_Integ_Sed(self.darksky, self.throughputs[band])
+        myup = self.Calc_Integ_Sed(self.darksky, self.system[band])
         # bpass = self.atmosphere[band]
         # if self.aerosol_b:
-        bpass = self.throughputs[band]
+        bpass = self.lsst_atmos_aerosol[band]
         self.data['Tb'][band] = self.Calc_Integ(bpass)
-        self.data['Sigmab'][band] = self.Calc_Integ(self.throughputs[band])
+        self.data['Sigmab'][band] = self.Calc_Integ(self.system[band])
         tt = np.log10(myup/(3631.*self.Sigmab(band)))
         self.data['mag_sky'][band] = -2.5 * tt
 
@@ -427,7 +519,7 @@ class Throughputs(Telescope, Atmos_Transmission):
         if self.aerosol_b:
             filtre_trans = self.aerosol[band]
         """
-        filtre_trans = self.throughputs[band]
+        filtre_trans = self.lsst_atmos_aerosol[band]
         # filtre_trans = self.aerosol[band]
         """
         wavelen_min, wavelen_max, wavelen_step = \
@@ -724,7 +816,7 @@ class Throughputs(Telescope, Atmos_Transmission):
            flux in photoelectron per sec.
 
         """
-        filter_trans = self.throughputs[band]
+        filter_trans = self.aerosol[band]
         if not hasattr(mag, '__iter__'):
 
             # wavelen_min, wavelen_max, wavelen_step = filter_trans.get_wavelen_limits(
@@ -797,60 +889,3 @@ class Throughputs(Telescope, Atmos_Transmission):
                 gamma, flux_e = self.gamma(m, b, e, nexpo)
                 r.append((gamma, flux_e))
             return np.asarray(r)
-
-    def etc(self, exptime=30., plateScale=0.2):
-        """
-        Method to print the throughputs parameters
-
-        Parameters
-        ----------
-        exptime : float, optional
-            exposure time. The default is 30..
-        plateScale : float, optional
-            plate scale ("2). The default is 0.2.
-
-        Returns
-        -------
-        None.
-
-        """
-
-        import pandas as pd
-        # exptime = 30
-        # plateScale = 0.2  # pixel size ''
-        bands = self.filter_list
-        df = pd.DataFrame(list(bands), columns=['band'])
-        zp = dict(zip(bands, [self.zp(b) for b in bands]))
-        mag_sky = dict(zip(bands, [self.mag_sky(b) for b in bands]))
-        flux_sky = dict(zip(bands, [self.flux_sky(b, exptime) for b in bands]))
-        m5 = dict(zip(bands, [self.m5(b, exptime) for b in bands]))
-
-        df['zp'] = [self.zp(b) for b in bands]
-        df['flux_zp'] = [self.counts_zp(b) for b in bands]
-        df['ADU_zp'] = [self.adu_zp(b) for b in bands]
-        df['msky'] = [self.mag_sky(b) for b in bands]
-        df['flux_sky'] = [self.flux_sky(b, exptime) for b in bands]
-        df['flux_sky_from_mag'] = 10**(-0.4 *
-                                       (df['msky']-df['zp']))*plateScale**2
-        # df['flux_sky_mag'] = -2.5*np.log10(df['flux_sky'])+df['zp']
-        df['FWHMeff'] = [self.FWHMeff(b) for b in bands]
-        df['m5'] = [self.m5(b, exptime) for b in bands]
-
-        df = df.rename(columns={"zp": "zp (AB)",
-                                "flux_zp": "flux_zp (pe/s/pix)",
-                                "flux_sky": "flux_sky (pe/s/pix)",
-                                "flux_sky_from_mag": "flux_sky_from_mag (pe/s/pix)",
-                                "FWHMeff": "FWHMEff ('')",
-                                "m5": "m5 (exptime: {} s)".format(exptime),
-                                "msky": "msky (/\"2)"})
-        df = df.round(2)
-        pd.set_option('display.colheader_justify', 'center')
-        print(df.to_string(index=False))
-
-    def mean_wave(self):
-        """ Estimate mean wave
-        """
-        for band in self.filter_list:
-            self.mean_wavelength[band] = np.sum(
-                self.throughputs[band].wavelen*self.throughputs[band].sb)\
-                / np.sum(self.throughputs[band].sb)
