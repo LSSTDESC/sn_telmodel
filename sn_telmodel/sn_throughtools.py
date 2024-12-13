@@ -15,7 +15,8 @@ class Sigma_zp_meanwave:
     def __init__(self, through_dir, site_name='LSST', pressure=743.,
                  par_names=['airmass', 'pwv', 'ozone', 'beta', 'aerosol'],
                  par_means=[1.2, 4.0, 300., 0.05, 0.05],
-                 par_sigmas=[0.01, 0.2, 10., 0.0, 0.001]):
+                 par_sigmas=[0.01, 0.2, 10., 0.0, 0.001],
+                 save_throughputs_dir=''):
         """
         class to estimate sigma_zp and sigma_lambdabar 
         according to atmospheric parameters variation
@@ -48,6 +49,12 @@ class Sigma_zp_meanwave:
 
         self.mean_values = self.get_values(par_names, par_means)
         self.sigma_values = self.get_values(par_names, par_sigmas)
+
+        self.save_throughputs_dir = save_throughputs_dir
+
+        if self.save_throughputs_dir != '':
+            from sn_tools.sn_io import checkDir
+            checkDir(self.save_throughputs_dir)
 
     def get_values(self, names, values):
         """
@@ -228,6 +235,7 @@ class Sigma_zp_meanwave:
         zp_dict = dict(zip(bands, [[], [], [], [], [], []]))
         mean_wave_dict = dict(zip(bands, [[], [], [], [], [], []]))
 
+        df_throughputs = pd.DataFrame()
         for i, row in data.iterrows():
             throughput.reset_data()
             throughput.new_atmosphere(airmass=row['airmass'],
@@ -235,7 +243,9 @@ class Sigma_zp_meanwave:
                                       pwv=row['pwv'],
                                       oz=row['ozone'],
                                       beta=row['beta'])
-
+            if self.save_throughputs_dir != '':
+                df_throughputs = pd.concat((df_throughputs,
+                                            self.get_throughputs(throughput, i, j)))
             throughput.mean_wave()
             for b in 'ugrizy':
                 # mean_wave = tel.mean_wavelength[b]
@@ -249,7 +259,25 @@ class Sigma_zp_meanwave:
         res_meanwave.columns = 'mean_wave_' + res_meanwave.columns
         res = pd.concat((res_zp, res_meanwave), axis=1)
 
+        if self.save_throughputs_dir != '':
+            outName = '{}/throughputs_{}.hdf5'.format(
+                self.save_throughputs_dir, j)
+            df_throughputs.to_hdf(outName, key='throughputs')
+
         if output_q is not None:
             return output_q.put({j: res})
         else:
             return res
+
+    def get_throughputs(self, throughput, ia, ib):
+
+        df_combi = pd.DataFrame()
+        for b in 'ugrizy':
+            tt = throughput.throughputs[b]
+            dfa = pd.DataFrame(tt.sb, columns=['sb'])
+            dfa['wavelen'] = tt.wavelen
+            dfa['band'] = b
+            df_combi = pd.concat((df_combi, dfa))
+            df_combi['combi'] = 'combi_{}_{}'.format(ia, ib)
+
+        return df_combi
