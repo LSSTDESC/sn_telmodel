@@ -854,3 +854,147 @@ class Throughputs(Telescope, Atmos_Transmission):
             self.mean_wavelength[band] = np.sum(
                 self.throughputs[band].wavelen*self.throughputs[band].sb)\
                 / np.sum(self.throughputs[band].sb)
+
+
+def load_throughputs_from_config(config):
+    """
+    Function to load telescope model
+
+    Parameters
+    ----------
+    config : dict
+        configuration parameters.
+
+    Returns
+    -------
+    tel : Telescope class (sn_telmodel.sn_telescope)
+        Telescope model.
+
+    """
+
+    name = config['name']
+    tel_dir = config['telescope']['dir']
+    tel_tag = config['telescope']['tag']
+    through_dir = config['throughputDir']
+    atmos_dir = config['atmosDir']
+    airmass = config['airmass']
+    aerosol = config['aerosol']
+    pwv = config['pwv']
+    oz = config['oz']
+
+    # point_to_tag(tel_dir, tel_tag)
+
+    tel_dir = '{}_{}'.format(tel_dir, tel_tag)
+    through_dir = '{}/{}'.format(tel_dir, through_dir)
+    atmos_dir = '{}/{}'.format(tel_dir, atmos_dir)
+
+    airmass = float(airmass)
+    aerosol = float(aerosol)
+    pwv = float(pwv)
+    oz = float(oz)
+
+    throughputs = Throughputs(tel_dir=through_dir,
+                              site_name=name,
+                              atmos_dir=atmos_dir,
+                              atmos_type='obsatmo')
+
+    throughputs.new_atmosphere(site_name=name,
+                               airmass=airmass,
+                               aerosol=aerosol,
+                               pwv=pwv, oz=oz)
+
+    """
+    tel = get_telescope(name=name, tel_dir=tel_dir,
+                        through_dir=through_dir,
+                        atmos_dir=atmos_dir, airmass=airmass,
+                        aerosol=aerosol, pwv=pwv, oz=oz, tag=tel_tag)
+    """
+    return throughputs
+
+
+def get_telescope(name='LSST',
+                  tel_dir='throughputs',
+                  through_dir='baseline',
+                  atmos_dir='atmos',
+                  tag='1.9', airmass=1.2, gain=2.5,
+                  pwv=4.0, oz=400,
+                  aerosol=0.0, beta=1.4, pressure=743.,
+                  load_components=False):
+    """
+    Function to grab telescope version
+
+    Parameters
+    ----------
+    name : str, optional
+       Telescope name. The default is 'LSST'.
+    tel_dir : str, optional
+       Main tel directory. The default is 'throughputs'.
+    through_dir : str, optional
+        Throughput directory. The default is 'throughputs/baseline'.
+    atmos_dir : str, optional
+        Atmosphere directory. The default is 'throughputs/atmos'.
+    tag : str, optional
+        Tag version for throughputs. The default is '1.9'.
+    airmass : float, optional
+        airmass value for throughputs. The default is 1.2.
+    gain: float, optional.
+         electronic gain. The default is 2.5
+    aerosol : bool, optional
+        add aerosol effect. The default is True.
+    load_components : bool, optional
+        To load all the components (one by one). The default is False.
+    Returns
+    -------
+    tela : TYPE
+        DESCRIPTION.
+
+    """
+
+    # print('Telescope instance', tel_dir)
+
+    """
+    tel = Telescope(tel_dir=tel_dir,
+                    airmass=airmass, through_dir=through_dir,
+                    atmos_dir=atmos_dir, aerosol=aerosol, pwv=pwv, oz=oz,
+                    beta=beta, pressure=pressure,
+                    load_components=load_components, tag=tag, gain=gain)
+    """
+
+    tel = Throughputs(tel_dir=tel_dir,
+                      airmass=airmass, through_dir=through_dir,
+                      atmos_dir=atmos_dir, aerosol=aerosol, pwv=pwv, oz=oz,
+                      beta=beta, pressure=pressure,
+                      load_components=load_components, tag=tag, gain=gain)
+
+    return tel
+
+
+def point_to_tag(tel_dir, tag):
+    """
+    Function to point to a given tel tag version
+
+    Parameters
+    ----------
+    tel_dir : str
+        Main telescope dir.
+    tag : str
+        Tag throughputs version.
+
+    Returns
+    -------
+    None.
+
+    """
+
+    import os
+    path = os.getcwd()
+    throughputs_dir = '{}_{}'.format(tel_dir, tag)
+    if not os.path.isdir(throughputs_dir):
+        cmd = 'git clone https://github.com/lsst/{} {}_{}'.format(
+            tel_dir, tel_dir, tag)
+        os.system(cmd)
+
+        os.chdir(throughputs_dir)
+        cmd = 'git checkout tags/{}'.format(tag)
+        os.system(cmd)
+        os.chdir(path)

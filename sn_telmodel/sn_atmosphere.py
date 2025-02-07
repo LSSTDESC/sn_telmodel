@@ -113,8 +113,8 @@ class Atmos_Transmission:
         self.atmosphere = self.get_bandpass_obsatmo(self.emul,
                                                     airmass, aerosol,
                                                     pwv, oz, beta)
-        #self.atmos_aerosol = atmosphere_aerosol
-        #self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
+        # self.atmos_aerosol = atmosphere_aerosol
+        # self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
         self.airmass = airmass
         self.aerosol = aerosol
         self.pwv = pwv
@@ -175,7 +175,7 @@ class Atmos_Transmission:
         fis = glob.glob(fName_full)
 
         self.atmosphere = self.get_bandpass_from_file(fis[0])
-        #self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
+        # self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
         self.airmass = airmass
         self.aerosol = 0.04
         self.pwv = 4.0

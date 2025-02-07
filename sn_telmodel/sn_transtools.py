@@ -65,3 +65,135 @@ def get_trans(am, pwv, oz, tau=0., beta=1.4,
 
     df = df.sort_values(by=colname[0])
     return df
+
+
+class Zeropoint_airmass:
+    def __init__(self, throughputs):
+        """
+        class to estimate zp vs airmass and fit (linear) the results
+
+        Parameters
+        ----------
+        throughputs: Throughputs class
+          instance of a throughput class
+
+        Returns
+        -------
+        None.
+
+        """
+
+        self.throughputs = throughputs
+
+    def get_data(self):
+        """
+        Method to estimate zp vs airmass
+
+        Returns
+        -------
+        res : numpy array
+            columns: filter, zp, airmass, mean_wave.
+
+        """
+
+        r = []
+        # point_to_tag(self.tel_dir, self.tag)
+        tel = self.throughputs
+        for airmass in np.arange(1., 2.51, 0.1):
+            """
+            tel = get_telescope(tel_dir=tel_dir,
+                                through_dir=through_dir,
+                                atmos_dir=atmos_dir,
+                                tag=self.tag, load_components=True,
+                                airmass=airmass,
+                                aerosol=self.aerosol, pwv=self.pwv, oz=self.oz)
+            """
+            tel.new_atmosphere(site_name=tel.site_name,
+                               airmass=airmass,
+                               aerosol=tel.aerosol,
+                               pwv=tel.pwv, oz=tel.oz)
+            tel.mean_wave()
+            for b in 'ugrizy':
+                # b = 'g'
+                # print(airmass, b, tel.zp(b))
+                mean_wave = tel.mean_wavelength[b]
+                rb = [airmass]
+                rb.append(b)
+                rb.append(tel.zp(b))
+                rb.append(tel.counts_zp(b))
+                rb.append(mean_wave)
+                r.append(rb)
+
+        res = np.rec.fromrecords(
+            r, names=['airmass', 'band', 'zp', 'zp_e_sec', 'mean_wavelength'])
+
+        return res
+
+    def fitfunc(self, x, a, b):
+        """
+        Function used for fitting
+
+        Parameters
+        ----------
+        x : array(float)
+            x-axis var.
+        a : float
+            slope.
+        b : float
+            intercept.
+
+        Returns
+        -------
+        array
+            list of values.
+
+        """
+
+        return a*x+b
+
+    def fit(self, res, xvar='airmass', yvar='zp'):
+        """
+        Function to fit yvar vs xvar for all bands.
+
+        Parameters
+        ----------
+        res : array
+            data to fit.
+        xvar : str, optional
+            x-axis var. The default is 'airmass'.
+        yvar : str, optional
+            y-axis var. The default is 'zp'.
+
+        Returns
+        -------
+        res : array
+            slop and intercep from the fit per band.
+            added mean_wavelength.
+
+        """
+
+        from scipy.optimize import curve_fit
+        r = []
+        for b in 'ugrizy':
+            idx = res['band'] == b
+            sel = res[idx]
+            xdata = sel[xvar]
+            ydata = sel[yvar]
+            popt, pcov = curve_fit(self.fitfunc, xdata, ydata)
+            mean_wave = np.mean(sel['mean_wavelength'])
+            r.append((b, popt[0], popt[1], mean_wave))
+
+        res = np.rec.fromrecords(
+            r, names=['band', 'slope', 'intercept', 'mean_wavelength'])
+
+        return res
+
+    def get_fit_params(self):
+
+        # get data
+        data = self.get_data()
+
+        # fit these data
+        fitdata = self.fit(data)
+
+        return fitdata
