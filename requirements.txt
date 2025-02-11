@@ -2,4 +2,4 @@
 numpy
 
 #### git packages
-git+https://github.com/lsst/getObsAtmo#egg=getObsAtmo
+git+https://github.com/lsstdesc/getObsAtmo#egg=getObsAtmo
