@@ -1,0 +1,5 @@
+###### Requirements without Version Specifiers ######
+numpy
+
+#### git packages
+git+https://github.com/lsst/getObsAtmo#egg=getObsAtmo
