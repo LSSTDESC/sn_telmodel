@@ -960,11 +960,12 @@ def get_telescope(name='LSST',
                     load_components=load_components, tag=tag, gain=gain)
     """
 
-    tel = Throughputs(tel_dir=tel_dir,
-                      airmass=airmass, through_dir=through_dir,
-                      atmos_dir=atmos_dir, aerosol=aerosol, pwv=pwv, oz=oz,
-                      beta=beta, pressure=pressure,
-                      load_components=load_components, tag=tag, gain=gain)
+    tel = Throughputs(tel_dir=through_dir,
+                      site_name=name,
+                      atmos_dir=atmos_dir, gain=gain)
+
+    tel.load_atmosphere(site_name=name, aerosol=aerosol, pwv=pwv, oz=oz,
+                        beta=beta, pressure=pressure)
 
     return tel
 
