@@ -959,14 +959,25 @@ def get_telescope(name='LSST',
                     beta=beta, pressure=pressure,
                     load_components=load_components, tag=tag, gain=gain)
     """
-
+    """
     tel = Throughputs(tel_dir=tel_dir,
                       airmass=airmass, through_dir=through_dir,
                       atmos_dir=atmos_dir, aerosol=aerosol, pwv=pwv, oz=oz,
                       beta=beta, pressure=pressure,
                       load_components=load_components, tag=tag, gain=gain)
+    """
 
-    return tel
+    throughputs = Throughputs(tel_dir=through_dir,
+                              site_name=name,
+                              atmos_dir=atmos_dir,
+                              atmos_type='obsatmo')
+
+    throughputs.new_atmosphere(site_name=name,
+                               airmass=airmass,
+                               aerosol=aerosol,
+                               pwv=pwv, oz=oz)
+
+    return throughputs
 
 
 def point_to_tag(tel_dir, tag):
