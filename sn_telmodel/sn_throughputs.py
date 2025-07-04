@@ -141,7 +141,7 @@ class Throughputs(Telescope, Atmos_Transmission):
             self.data[par] = {}
 
     def new_atmosphere(self, site_name='LSST', airmass=1.2, aerosol=0.0,
-                       pwv=4.0, oz=300, beta=1.4, pressure=743.):
+                       pwv=4.0, ozone=300, beta=1.4, pressure=743.):
         """
         Method to load atmospheric transmission
 
@@ -155,7 +155,7 @@ class Throughputs(Telescope, Atmos_Transmission):
             aerosol. The default is 0.0.
         pwv : float, optional
             precipitable water vapor. The default is 4.0.
-        oz : float, optional
+        ozone : float, optional
             ozone. The default is 300.
         beta : float, optional
             Angstrom exponent. The default is 1.4.
@@ -170,7 +170,7 @@ class Throughputs(Telescope, Atmos_Transmission):
 
         # load new atmosphere (update self.atmosphere)
         self.load_atmosphere(site_name, airmass, aerosol,
-                             pwv, oz, beta, pressure)
+                             pwv, ozone, beta, pressure)
 
         # get new throughputs
         self.throughputs = self.get_throughputs(self.atmosphere)
@@ -880,7 +880,7 @@ def load_throughputs_from_config(config):
     airmass = config['airmass']
     aerosol = config['aerosol']
     pwv = config['pwv']
-    oz = config['oz']
+    ozone = config['ozone']
 
     # point_to_tag(tel_dir, tel_tag)
 
@@ -891,7 +891,7 @@ def load_throughputs_from_config(config):
     airmass = float(airmass)
     aerosol = float(aerosol)
     pwv = float(pwv)
-    oz = float(oz)
+    ozone = float(ozone)
 
     throughputs = Throughputs(tel_dir=through_dir,
                               site_name=name,
@@ -901,7 +901,7 @@ def load_throughputs_from_config(config):
     throughputs.new_atmosphere(site_name=name,
                                airmass=airmass,
                                aerosol=aerosol,
-                               pwv=pwv, oz=oz)
+                               pwv=pwv, ozone=ozone)
 
     """
     tel = get_telescope(name=name, tel_dir=tel_dir,
@@ -917,7 +917,7 @@ def get_telescope(name='LSST',
                   through_dir='baseline',
                   atmos_dir='atmos',
                   tag='1.9', airmass=1.2, gain=2.5,
-                  pwv=4.0, oz=400,
+                  pwv=4.0, ozone=400,
                   aerosol=0.0, beta=1.4, pressure=743.,
                   load_components=False):
     """
@@ -975,7 +975,7 @@ def get_telescope(name='LSST',
     throughputs.new_atmosphere(site_name=name,
                                airmass=airmass,
                                aerosol=aerosol,
-                               pwv=pwv, oz=oz)
+                               pwv=pwv, ozone=ozone)
 
     return throughputs
 

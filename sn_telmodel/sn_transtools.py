@@ -68,7 +68,7 @@ def get_trans(am, pwv, oz, tau=0., beta=1.4,
 
 
 class Zeropoint_airmass:
-    def __init__(self, throughputs):
+    def __init__(self, throughputs, pwv=4.0, ozone=400., aerosol=0.0):
         """
         class to estimate zp vs airmass and fit (linear) the results
 
@@ -76,7 +76,12 @@ class Zeropoint_airmass:
         ----------
         throughputs: Throughputs class
           instance of a throughput class
-
+        pwv : float, optional
+            pwv value. The default is 4.0.
+        ozone :float, optional
+            ozone value. The default is 400..
+        aerosol : float, optional
+            aerosol value. The default is 0.0.
         Returns
         -------
         None.
@@ -84,6 +89,9 @@ class Zeropoint_airmass:
         """
 
         self.throughputs = throughputs
+        self.pwv = pwv
+        self.ozone = ozone
+        self.aerosol = aerosol
 
     def get_data(self):
         """
@@ -110,8 +118,8 @@ class Zeropoint_airmass:
             """
             tel.new_atmosphere(site_name=tel.site_name,
                                airmass=airmass,
-                               aerosol=tel.aerosol,
-                               pwv=tel.pwv, oz=tel.oz)
+                               aerosol=self.aerosol,
+                               pwv=self.pwv, ozone=self.ozone)
             tel.mean_wave()
             for b in 'ugrizy':
                 # b = 'g'
