@@ -131,7 +131,8 @@ class Zeropoint_airmass:
                 rb.append(tel.counts_zp(b))
                 rb.append(mean_wave)
                 r.append(rb)
-
+            tel.reset_data()
+            
         res = np.rec.fromrecords(
             r, names=['airmass', 'band', 'zp', 'zp_e_sec', 'mean_wavelength'])
 
