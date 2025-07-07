@@ -156,6 +156,7 @@ class Telescope:
         import matplotlib.pyplot as plt
         # filters
         fig, ax = plt.subplots(figsize=(12, 8))
+        fig.subplots_adjust(right=0.75)
         # without optics
         for key, vals in self.filter.items():
             self.plot_component(key, vals, fig=fig, ax=ax,
@@ -211,4 +212,6 @@ class Telescope:
         ax.set_title(figtit)
         ax.set_ylim([0.0, 1.])
         ax.grid(visible=True)
-        ax.legend()
+        
+        ax.legend(bbox_to_anchor=(1.0, 0.7),
+                  ncol=1, fontsize=15, frameon=False)
