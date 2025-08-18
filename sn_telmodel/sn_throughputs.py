@@ -105,10 +105,13 @@ class Throughputs(Telescope, Atmos_Transmission):
         self.load_darksky(darksky_file)
 
         # load_atmosphere
-        self.load_atmosphere()
+        """
+        self.load_atmosphere(site_name, airmass, aerosol,
+                             pwv, ozone, beta, pressure)
 
         # get throughputs
         self.throughputs = self.get_throughputs(self.atmosphere)
+        """
 
         # throughgputs data
         self.data = {}
@@ -385,12 +388,13 @@ class Throughputs(Telescope, Atmos_Transmission):
           filter
 
         """
-        myup = self.Calc_Integ_Sed(self.darksky, self.throughputs[band])
+        myup = self.Calc_Integ_Sed(self.darksky, self.tel_trans[band])
+
         # bpass = self.atmosphere[band]
         # if self.aerosol_b:
         bpass = self.throughputs[band]
         self.data['Tb'][band] = self.Calc_Integ(bpass)
-        self.data['Sigmab'][band] = self.Calc_Integ(self.throughputs[band])
+        self.data['Sigmab'][band] = self.Calc_Integ(self.tel_trans[band])
         tt = np.log10(myup/(3631.*self.Sigmab(band)))
         self.data['mag_sky'][band] = -2.5 * tt
 
@@ -846,6 +850,8 @@ class Throughputs(Telescope, Atmos_Transmission):
         df['pwv'] = self.pwv
         df['ozone'] = self.ozone
         df['airmass'] = self.airmass
+        df['Tb'] = [self.Tb(b) for b in bands]
+        df['Sigmab'] = [self.Sigmab(b) for b in bands]
 
         df = df.rename(columns={"zp": "zp (AB)",
                                 "flux_zp": "flux_zp (pe/s/pix)",
@@ -854,7 +860,7 @@ class Throughputs(Telescope, Atmos_Transmission):
                                 "FWHMeff": "FWHMEff ('')",
                                 "m5": "m5 (exptime: {} s)".format(exptime),
                                 "msky": "msky (/\"2)"})
-        df = df.round(2)
+        df = df.round(3)
         pd.set_option('display.colheader_justify', 'center')
         print(df.to_string(index=False))
 
@@ -930,7 +936,7 @@ def get_telescope(name='LSST',
                   tag='1.9', airmass=1.2, gain=2.5,
                   pwv=4.0, ozone=400,
                   aerosol=0.0, beta=1.4, pressure=743.,
-                  load_components=False):
+                  load_components=False, atmos_type='obsatmo'):
     """
     Function to grab telescope version
 
@@ -954,6 +960,8 @@ def get_telescope(name='LSST',
         add aerosol effect. The default is True.
     load_components : bool, optional
         To load all the components (one by one). The default is False.
+    atmos_type: str, optional
+      type of atmos estim (obsatmo/from_file)
     Returns
     -------
     tela : TYPE
@@ -991,7 +999,7 @@ def get_telescope(name='LSST',
     throughputs = Throughputs(tel_dir=through_dir,
                               site_name=name,
                               atmos_dir=atmos_dir,
-                              atmos_type='obsatmo')
+                              atmos_type=atmos_type)
 
     throughputs.new_atmosphere(site_name=name,
                                airmass=airmass,
