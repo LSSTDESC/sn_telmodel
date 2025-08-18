@@ -130,7 +130,7 @@ class Atmos_Transmission:
         """
 
     def get_bandpass_obsatmo(self, emul, airmass=1.2, aerosol=0.0,
-                             pwv=4.0, oz=300, beta=1.4):
+                             pwv=4.0, ozone=300, beta=1.4):
         """
         Method to get band pass using getObsAtmo
 
@@ -144,7 +144,7 @@ class Atmos_Transmission:
             aerosol. The default is 0.0.
         pwv : float, optional
             precipitable water vapor. The default is 4.0.
-        oz : float, optional
+        ozone : float, optional
             Ozone. The default is 300.
 
         Returns
@@ -154,7 +154,7 @@ class Atmos_Transmission:
 
         """
 
-        trans = get_trans(airmass, pwv, oz, aerosol, beta,
+        trans = get_trans(airmass, pwv, ozone, aerosol, beta,
                           colname=['wl', 'trans'],
                           emul=emul)
         trans = trans.round({'wl': 1, 'trans': 8})
@@ -186,7 +186,7 @@ class Atmos_Transmission:
         self.airmass = airmass
         self.aerosol = 0.04
         self.pwv = 4.0
-        self.oz = 300.
+        self.ozone = 300.
         self.beta = 1.4
         self.pressure = 743.
 
