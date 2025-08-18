@@ -241,7 +241,7 @@ class Sigma_zp_meanwave:
             throughput.new_atmosphere(airmass=row['airmass'],
                                       aerosol=row['aerosol'],
                                       pwv=row['pwv'],
-                                      oz=row['ozone'],
+                                      ozone=row['ozone'],
                                       beta=row['beta'])
             if self.save_throughputs_dir != '':
                 df_throughputs = pd.concat((df_throughputs,
