@@ -27,10 +27,10 @@ def get_val_decor(func):
 
 def get_val_decorb(func):
     @wraps(func)
-    def func_decob(theclass, what, xlist, y):
+    def func_decob(theclass, what, xlist, y, z):
         for x in xlist:
             if x not in theclass.data[what].keys():
-                func(theclass, what, x, y)
+                func(theclass, what, x, y, z)
     return func_decob
 
 
@@ -302,7 +302,7 @@ class Throughputs(Telescope, Atmos_Transmission):
         ax.grid(visible=True)
 
     @get_val_decorb
-    def get(self, what, band, exptime):
+    def get(self, what, band, exptime, nexp):
         """
         Decorator to access quantities
 
@@ -312,6 +312,10 @@ class Throughputs(Telescope, Atmos_Transmission):
           parameter to estimate
         band: str
           filter
+        exptime: float
+          exposure time
+        nexp: int
+          number of exposure
 
         """
         filter_trans = self.throughputs[band]
@@ -340,7 +344,7 @@ class Throughputs(Telescope, Atmos_Transmission):
         photParams = photometric_parameters.PhotometricParameters(
             gain=self.gain, bandpass=band)
         photParams._exptime = exptime
-        photParams._nexp = 1
+        photParams._nexp = nexp
         exptime = photParams.exptime
         nexp = photParams.nexp
         vv = self.mag_to_flux_e_sec(self.mag_sky(band), band, exptime, nexp)
@@ -354,9 +358,9 @@ class Throughputs(Telescope, Atmos_Transmission):
         trans = self.throughputs[band]
 
         from rubin_sim.phot_utils import signaltonoise
-        nexp = exptime/30
+        # nexp = exptime/30
         photParams._nexp = nexp
-        photParams._exptime = exptime/nexp
+        photParams._exptime = exptime
 
         flatSedb = Sed()
         flatSedb.set_flat_sed(wavelen_min, wavelen_max, wavelen_step)
@@ -478,10 +482,10 @@ class Throughputs(Telescope, Atmos_Transmission):
         else:
             return self.data[what][band]
 
-    def m5(self, filtre, exptime):
+    def m5(self, filtre, exptime, nexp):
         """m5 accessor
         """
-        self.get('m5', filtre, exptime)
+        self.get('m5', filtre, exptime, nexp)
         return self.return_value('m5', filtre)
 
     def Tb(self, filtre):
@@ -496,11 +500,11 @@ class Throughputs(Telescope, Atmos_Transmission):
         self.get_inputs('mag_sky', filtre)
         return self.return_value('mag_sky', filtre)
 
-    def flux_sky(self, filtre, exptime):
+    def flux_sky(self, filtre, exptime, nexp):
         """flux_sky accessor
         """
 
-        self.get('flux_sky', filtre, exptime)
+        self.get('flux_sky', filtre, exptime, nexp)
         return self.return_value('flux_sky', filtre)
 
     def Sigmab(self, filtre):
@@ -798,7 +802,7 @@ class Throughputs(Telescope, Atmos_Transmission):
                 r.append((gamma, flux_e))
             return np.asarray(r)
 
-    def etc(self, exptime=30., plateScale=0.2):
+    def etc(self, exptime=30., plateScale=0.2, nexp=1):
         """
         Method to print the throughputs parameters
 
@@ -808,6 +812,8 @@ class Throughputs(Telescope, Atmos_Transmission):
             exposure time. The default is 30..
         plateScale : float, optional
             plate scale ("2). The default is 0.2.
+        nexp: int, optional
+            number of exposure. The default is 1.
 
         Returns
         -------
@@ -822,19 +828,24 @@ class Throughputs(Telescope, Atmos_Transmission):
         df = pd.DataFrame(list(bands), columns=['band'])
         zp = dict(zip(bands, [self.zp(b) for b in bands]))
         mag_sky = dict(zip(bands, [self.mag_sky(b) for b in bands]))
-        flux_sky = dict(zip(bands, [self.flux_sky(b, exptime) for b in bands]))
-        m5 = dict(zip(bands, [self.m5(b, exptime) for b in bands]))
+        flux_sky = dict(
+            zip(bands, [self.flux_sky(b, exptime, nexp) for b in bands]))
+        m5 = dict(zip(bands, [self.m5(b, exptime, nexp) for b in bands]))
 
         df['zp'] = [self.zp(b) for b in bands]
         df['flux_zp'] = [self.counts_zp(b) for b in bands]
         df['ADU_zp'] = [self.adu_zp(b) for b in bands]
         df['msky'] = [self.mag_sky(b) for b in bands]
-        df['flux_sky'] = [self.flux_sky(b, exptime) for b in bands]
+        df['flux_sky'] = [self.flux_sky(b, exptime, nexp) for b in bands]
         df['flux_sky_from_mag'] = 10**(-0.4 *
                                        (df['msky']-df['zp']))*plateScale**2
         # df['flux_sky_mag'] = -2.5*np.log10(df['flux_sky'])+df['zp']
         df['FWHMeff'] = [self.FWHMeff(b) for b in bands]
-        df['m5'] = [self.m5(b, exptime) for b in bands]
+        df['m5'] = [self.m5(b, exptime, nexp) for b in bands]
+        df['aerosol'] = self.aerosol
+        df['pwv'] = self.pwv
+        df['ozone'] = self.ozone
+        df['airmass'] = self.airmass
 
         df = df.rename(columns={"zp": "zp (AB)",
                                 "flux_zp": "flux_zp (pe/s/pix)",
