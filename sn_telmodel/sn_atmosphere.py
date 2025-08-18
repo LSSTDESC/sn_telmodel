@@ -45,7 +45,7 @@ class Atmos_Transmission:
             self.emul = ObsAtmo(site_name, pressure)
 
     def load_atmosphere(self, site_name='LSST', airmass=1.2, aerosol=0.0,
-                        pwv=4.0, oz=300, beta=1.4, pressure=743.):
+                        pwv=4.0, ozone=300, beta=1.4, pressure=743.):
         """
         Method to load atmospheric transmission
 
@@ -59,7 +59,7 @@ class Atmos_Transmission:
             aerosol. The default is 0.0.
         pwv : float, optional
             precipitable water vapor. The default is 4.0.
-        oz : float, optional
+        ozone : float, optional
             ozone. The default is 300.
         beta : float, optional
             Angstrom exponent. The default is 1.4.
@@ -72,15 +72,20 @@ class Atmos_Transmission:
 
         """
 
+        self.airmass = airmass
+        self.pwv = pwv
+        self.ozone = ozone
+        self.aerosol = aerosol
+
         if self.atmos_type == 'obsatmo':
             self.load_atmosphere_obsatmo(site_name, airmass, aerosol,
-                                         pwv, oz, beta, pressure)
+                                         pwv, ozone, beta, pressure)
 
         if self.atmos_type == 'from_file':
             self.load_atmosphere_from_file(airmass)
 
     def load_atmosphere_obsatmo(self, site_name='LSST', airmass=1.2, aerosol=0.0,
-                                pwv=4.0, oz=300, beta=1.4, pressure=743.):
+                                pwv=4.0, ozone=300, beta=1.4, pressure=743.):
         """
         Load atmosphere files
         and convolve with transmissions
@@ -95,7 +100,7 @@ class Atmos_Transmission:
             aerosol value. The default is 0.0.
         pwv : float, optional
             precipitable water vapor value. The default is 4.0.
-        oz : float, optional
+        ozone : float, optional
             ozone value. The default is 300.
         beta : float, optional
             angström parameter. The default is 1.4.
@@ -112,15 +117,17 @@ class Atmos_Transmission:
             self.emul = ObsAtmo(site_name, pressure)
         self.atmosphere = self.get_bandpass_obsatmo(self.emul,
                                                     airmass, aerosol,
-                                                    pwv, oz, beta)
+                                                    pwv, ozone, beta)
         # self.atmos_aerosol = atmosphere_aerosol
         # self.lsst_atmos_aerosol = self.get_throughputs(atmosphere_aerosol)
+        """
         self.airmass = airmass
         self.aerosol = aerosol
         self.pwv = pwv
-        self.oz = oz
+        self.ozone = ozone
         self.beta = beta
         self.pressure = pressure
+        """
 
     def get_bandpass_obsatmo(self, emul, airmass=1.2, aerosol=0.0,
                              pwv=4.0, oz=300, beta=1.4):
