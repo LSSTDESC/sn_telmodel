@@ -76,6 +76,7 @@ class Atmos_Transmission:
         self.pwv = pwv
         self.ozone = ozone
         self.aerosol = aerosol
+        self.beta = beta
 
         if self.atmos_type == 'obsatmo':
             self.load_atmosphere_obsatmo(site_name, airmass, aerosol,
