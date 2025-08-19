@@ -358,20 +358,28 @@ class Throughputs(Telescope, Atmos_Transmission):
         print(vv, vvb)
         self.data['flux_sky'][band] = vv
 
-        trans = self.throughputs[band]
+        trans = self.tel_trans[band]
 
-        from rubin_sim.phot_utils import signaltonoise
+        """
         # nexp = exptime/30
         photParams._nexp = nexp
         photParams._exptime = exptime
 
         flatSedb = Sed()
         flatSedb.set_flat_sed(wavelen_min, wavelen_max, wavelen_step)
-        flux0b = flatSedb.calc_flux_norm(self.mag_sky(band), filter_trans)
+        flux0b = flatSedb.calc_flux_norm(
+            self.mag_sky(band), trans)
         flatSedb.multiply_flux_norm(flux0b)
+        
+        """
+        sky = Sed()
+        sky.set_sed(wavelen=self.darksky.wavelen, flambda=self.darksky.flambda)
+        fluxNorm = sky.calc_flux_norm(self.mag_sky(band), trans)
+        sky.multiply_flux_norm(fluxNorm)
 
+        from rubin_sim.phot_utils import signaltonoise
         self.data['m5'][band] = signaltonoise.calc_m5(
-            flatSedb, trans, filter_trans,
+            sky, filter_trans, trans,
             phot_params=photParams,
             fwhm_eff=self.FWHMeff(band))
 
