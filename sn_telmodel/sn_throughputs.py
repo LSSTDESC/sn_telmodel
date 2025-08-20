@@ -355,7 +355,6 @@ class Throughputs(Telescope, Atmos_Transmission):
         vvb = 10**(-0.4*(self.mag_sky(band)-self.zp(band)))
         vvb *= photParams.platescale**2
 
-        print(vv, vvb)
         self.data['flux_sky'][band] = vv
 
         trans = self.tel_trans[band]
