@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sn_telmodel"
-dynamic=["version"]
+version="1.0.2"
 requires-python = ">=3.5"
 dependencies = [
   "getObsAtmo@git+https://github.com/lsstdesc/getObsAtmo#egg=getObsAtmo",
@@ -19,9 +19,6 @@ maintainers = [
 description = "Set of tools for telescope model'"
 readme = "README.rst"
 classifiers = ["Programming Language :: Python",]
-
-[tool.setuptools.dynamic]
-version = {attr = "sn_telmodel.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["."]
