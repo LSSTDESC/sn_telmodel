@@ -275,6 +275,31 @@ class Throughputs(Telescope, Atmos_Transmission):
         self.darksky = Sed()
         self.darksky.read_sed_flambda(darksky_file)
 
+    def load_darksky_wave_flux(self, wavelength, flux):
+        """
+        Method to load a dark sky from (wave,flux) 
+
+        Parameters
+        ----------
+        wavelength : list(float)
+            wavelength.
+        flux : list(float)
+            night sky fluxes.
+
+        Returns
+        -------
+        Sed
+            the night sky flux
+
+        """
+
+        self.darkSky = Sed()
+        waveb = np.asarray(wavelength)
+        fluxb = np.asarray(flux[0])
+
+        idx = waveb <= 1200.
+        self.darksky.set_sed(wavelen=waveb[idx], flambda=fluxb[idx])
+
     def plot_darksky(self, plt, fig=None, ax=None):
         """
         Method to plot the dark sky sed
@@ -298,7 +323,7 @@ class Throughputs(Telescope, Atmos_Transmission):
             fig, ax = plt.subplots(figsize=(12, 8))
 
         ax.plot(self.darksky.wavelen,
-                self.darksky.flambda, 'k:', linestyle='-')
+                self.darksky.flambda, color='k', linestyle='-')
         ax.set_xlabel('Wavelength (nm)')
         ax.set_ylabel('flambda (ergs/cm$^2$/s/nm)')
         fig.suptitle('Dark Sky SED')
@@ -377,6 +402,7 @@ class Throughputs(Telescope, Atmos_Transmission):
         sky.multiply_flux_norm(fluxNorm)
 
         from rubin_sim.phot_utils import signaltonoise
+
         self.data['m5'][band] = signaltonoise.calc_m5(
             sky, filter_trans, trans,
             phot_params=photParams,
@@ -395,6 +421,7 @@ class Throughputs(Telescope, Atmos_Transmission):
           filter
 
         """
+
         myup = self.Calc_Integ_Sed(self.darksky, self.tel_trans[band])
 
         # bpass = self.atmosphere[band]

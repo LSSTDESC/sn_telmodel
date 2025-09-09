@@ -176,10 +176,13 @@ class Atmos_Transmission:
           Default : 1.2
         """
 
-        fName = 'atmos_{}_aerosol'.format(int(10*airmass))
+        airmass_val = np.ceil(10*airmass)
+        fName = 'atmos_{}_aerosol'.format(int(airmass_val))
+        # fName = 'atmos_{}'.format(int(airmass_val))
 
         fName_full = '{}/{}*.dat'.format(self.atmos_dir, fName)
 
+        # print('loading file', fName)
         fis = glob.glob(fName_full)
 
         self.atmosphere = self.get_bandpass_from_file(fis[0])
