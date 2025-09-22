@@ -45,7 +45,8 @@ class Atmos_Transmission:
             self.emul = ObsAtmo(site_name, pressure)
 
     def load_atmosphere(self, site_name='LSST', airmass=1.2, aerosol=0.0,
-                        pwv=4.0, ozone=300, beta=1.4, pressure=743.):
+                        pwv=4.0, ozone=300, beta=1.4, pressure=743.,
+                        atmos_type='obsatmo'):
         """
         Method to load atmospheric transmission
 
@@ -65,6 +66,8 @@ class Atmos_Transmission:
             Angstrom exponent. The default is 1.4.
         pressure : float, optional
             pressure. The default is 743..
+        atmos_type : str, optional
+            atmos type (obsatmo/from_file). The default is obsatmo.
 
         Returns
         -------
@@ -77,6 +80,8 @@ class Atmos_Transmission:
         self.ozone = ozone
         self.aerosol = aerosol
         self.beta = beta
+
+        self.atmos_type = atmos_type
 
         if self.atmos_type == 'obsatmo':
             self.load_atmosphere_obsatmo(site_name, airmass, aerosol,
