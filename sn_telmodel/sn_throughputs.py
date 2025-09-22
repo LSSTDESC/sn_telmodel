@@ -144,7 +144,8 @@ class Throughputs(Telescope, Atmos_Transmission):
             self.data[par] = {}
 
     def new_atmosphere(self, site_name='LSST', airmass=1.2, aerosol=0.0,
-                       pwv=4.0, ozone=300, beta=1.4, pressure=743.):
+                       pwv=4.0, ozone=300, beta=1.4, pressure=743.,
+                       atmos_type='obsatmo'):
         """
         Method to load atmospheric transmission
 
@@ -164,6 +165,8 @@ class Throughputs(Telescope, Atmos_Transmission):
             Angstrom exponent. The default is 1.4.
         pressure : float, optional
             pressure. The default is 743..
+        atmos_type : str, optional
+            atmos type (obsatmo/from_file). The default is obsatmo.
 
         Returns
         -------
@@ -173,7 +176,7 @@ class Throughputs(Telescope, Atmos_Transmission):
 
         # load new atmosphere (update self.atmosphere)
         self.load_atmosphere(site_name, airmass, aerosol,
-                             pwv, ozone, beta, pressure)
+                             pwv, ozone, beta, pressure, atmos_type)
 
         # get new throughputs
         self.throughputs = self.get_throughputs(self.atmosphere)
@@ -1038,7 +1041,8 @@ def get_telescope(name='LSST',
     throughputs.new_atmosphere(site_name=name,
                                airmass=airmass,
                                aerosol=aerosol,
-                               pwv=pwv, ozone=ozone)
+                               pwv=pwv, ozone=ozone,
+                               atmos_type=atmos_type)
 
     return throughputs
 
