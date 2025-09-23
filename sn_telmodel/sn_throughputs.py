@@ -380,7 +380,7 @@ class Throughputs(Telescope, Atmos_Transmission):
         nexp = photParams.nexp
         vv = self.mag_to_flux_e_sec(self.mag_sky(band), band, exptime, nexp)
         vv = vv[1]*photParams.platescale**2
-        vvb = 10**(-0.4*(self.mag_sky(band)-self.zp(band)))
+        vvb = 10**(-0.4*(self.mag_sky(band)-self.zp(band,exptime,nexp)))
         vvb *= photParams.platescale**2
 
         self.data['flux_sky'][band] = vv
@@ -435,8 +435,8 @@ class Throughputs(Telescope, Atmos_Transmission):
         tt = np.log10(myup/(3631.*self.Sigmab(band)))
         self.data['mag_sky'][band] = -2.5 * tt
 
-    @get_val_decor
-    def get_zp(self, what, band):
+    @get_val_decorb
+    def get_zp(self, what, band,exptime,nexp):
         """
         decorator get zero points
         formula used here are extracted from LSE-40
@@ -561,7 +561,7 @@ class Throughputs(Telescope, Atmos_Transmission):
         self.get_inputs('Sigmab', filtre)
         return self.return_value('Sigmab', filtre)
 
-    def zp(self, filtre):
+    def zp(self, filtre,exptime,nexp):
         """
         zp accessor
 
@@ -571,10 +571,10 @@ class Throughputs(Telescope, Atmos_Transmission):
           filter
 
         """
-        self.get_zp('zp', filtre)
+        self.get_zp('zp', filtre,exptime,nexp)
         return self.return_value('zp', filtre)
 
-    def counts_zp(self, filtre):
+    def counts_zp(self, filtre,exptime,nexp):
         """
         counts_zp accessor
 
@@ -588,10 +588,10 @@ class Throughputs(Telescope, Atmos_Transmission):
         None.
 
         """
-        self.get_zp('zp', filtre)
+        self.get_zp('zp', filtre,exptime,nexp)
         return self.return_value('counts_zp', filtre)
 
-    def adu_zp(self, filtre):
+    def adu_zp(self, filtre,exptime,nexp):
         """
         counts_zp accessor
 
@@ -605,7 +605,7 @@ class Throughputs(Telescope, Atmos_Transmission):
         None.
 
         """
-        self.get_zp('zp', filtre)
+        self.get_zp('zp', filtre,exptime,nexp)
         return self.return_value('adu_zp', filtre)
 
     def FWHMeff(self, filtre):
@@ -867,15 +867,15 @@ class Throughputs(Telescope, Atmos_Transmission):
         # plateScale = 0.2  # pixel size ''
         bands = self.filter_list
         df = pd.DataFrame(list(bands), columns=['band'])
-        zp = dict(zip(bands, [self.zp(b) for b in bands]))
+        zp = dict(zip(bands, [self.zp(b,exptime,nexp) for b in bands]))
         mag_sky = dict(zip(bands, [self.mag_sky(b) for b in bands]))
         flux_sky = dict(
             zip(bands, [self.flux_sky(b, exptime, nexp) for b in bands]))
         m5 = dict(zip(bands, [self.m5(b, exptime, nexp) for b in bands]))
 
-        df['zp'] = [self.zp(b) for b in bands]
-        df['flux_zp'] = [self.counts_zp(b) for b in bands]
-        df['ADU_zp'] = [self.adu_zp(b) for b in bands]
+        df['zp'] = [self.zp(b,exptime,nexp) for b in bands]
+        df['flux_zp'] = [self.counts_zp(b,exptime,nexp) for b in bands]
+        df['ADU_zp'] = [self.adu_zp(b,exptime,nexp) for b in bands]
         df['msky'] = [self.mag_sky(b) for b in bands]
         df['flux_sky'] = [self.flux_sky(b, exptime, nexp) for b in bands]
         df['flux_sky_from_mag'] = 10**(-0.4 *
