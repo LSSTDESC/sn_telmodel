@@ -68,7 +68,8 @@ def get_trans(am, pwv, oz, tau=0., beta=1.4,
 
 
 class Zeropoint_airmass:
-    def __init__(self, throughputs, pwv=4.0, ozone=400., aerosol=0.0):
+    def __init__(self, throughputs, pwv=4.0, ozone=400.,
+                 aerosol=0.0, exptime=30., nexp=1):
         """
         class to estimate zp vs airmass and fit (linear) the results
 
@@ -82,6 +83,10 @@ class Zeropoint_airmass:
             ozone value. The default is 400..
         aerosol : float, optional
             aerosol value. The default is 0.0.
+        exptime: float, optional.
+            exposure time [s]. the default is 30.
+        nexp: float, optional
+            number of exposure. The default is 1.
         Returns
         -------
         None.
@@ -92,6 +97,8 @@ class Zeropoint_airmass:
         self.pwv = pwv
         self.ozone = ozone
         self.aerosol = aerosol
+        self.exptime = exptime
+        self.nexp = nexp
 
     def get_data(self):
         """
@@ -127,12 +134,13 @@ class Zeropoint_airmass:
                 mean_wave = tel.mean_wavelength[b]
                 rb = [airmass]
                 rb.append(b)
-                rb.append(tel.zp(b))
-                rb.append(tel.counts_zp(b))
+                rb.append(tel.zp(b, exptime=self.exptime, nexp=self.nexp))
+                rb.append(tel.counts_zp(
+                    b, exptime=self.exptime, nexp=self.nexp))
                 rb.append(mean_wave)
                 r.append(rb)
             tel.reset_data()
-            
+
         res = np.rec.fromrecords(
             r, names=['airmass', 'band', 'zp', 'zp_e_sec', 'mean_wavelength'])
 
