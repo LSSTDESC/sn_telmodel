@@ -449,14 +449,14 @@ class Throughputs(Telescope, Atmos_Transmission):
         """
         photParams = photometric_parameters.PhotometricParameters(gain=self.gain,
                                                                   bandpass=band)
-        photParams._exptime = 30
-        photParams._nexp = 1
+        photParams._exptime = exptime
+        photParams._nexp = nexp
         Diameter = 2.*np.sqrt(photParams.effarea*1.e-4 /
                               np.pi)  # diameter in meter
         Cte = 3631.*np.pi*Diameter**2*photParams.exptime/4/h/1.e36
 
         self.data['Skyb'][band] = Cte*np.power(Diameter/6.5, 2.)\
-            * np.power(photParams.exptime/30., 1.)\
+            * np.power(photParams.exptime/30., nexp)\
             * np.power(photParams.platescale, 2.)\
             * 10.**0.4*(25.-self.mag_sky(band))\
             * self.Sigmab(band)
