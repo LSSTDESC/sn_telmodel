@@ -249,7 +249,7 @@ class Sigma_zp_meanwave:
             throughput.mean_wave()
             for b in 'ugrizy':
                 # mean_wave = tel.mean_wavelength[b]
-                zpb = throughput.zp(b)
+                zpb = throughput.zp(b, exptime=30, nexp=1)
                 zp_dict[b].append(zpb)
                 mean_wave_dict[b].append(throughput.mean_wavelength[b])
 
