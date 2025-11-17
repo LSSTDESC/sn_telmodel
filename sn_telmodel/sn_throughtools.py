@@ -97,6 +97,8 @@ class Sigma_zp_meanwave:
         # get random values
         param_values = self.get_random_values(ntrials)
 
+        idx = param_values['airmass'] >= 1
+        param_values = param_values[idx]
         params = {}
 
         params['throughput'] = self.throughput
