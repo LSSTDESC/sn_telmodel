@@ -16,7 +16,8 @@ class Sigma_zp_meanwave:
                  par_names=['airmass', 'pwv', 'ozone', 'beta', 'aerosol'],
                  par_means=[1.2, 4.0, 300., 0.05, 0.05],
                  par_sigmas=[0.01, 0.2, 10., 0.0, 0.001],
-                 save_throughputs_dir=''):
+                 save_throughputs_dir='',
+                 param_outDir='', param_outName=''):
         """
         class to estimate sigma_zp and sigma_lambdabar 
         according to atmospheric parameters variation
@@ -36,6 +37,12 @@ class Sigma_zp_meanwave:
             parameter means. The default is [1.2, 4.0, 300., 0.05, 0.05].
         par_sigmas : list(float), optional
             parameters sigmas. The default is [0.01, 0.2, 10., 0.0, 0.001].
+        save_throughputs_dir: str, optional
+           dir where to save throughputs
+        param_outDir: str, optional
+           params output dir name. The default is ''
+        param_outName: str, optional
+           params output file name. The default is ''
 
         Returns
         -------
@@ -50,7 +57,13 @@ class Sigma_zp_meanwave:
         self.mean_values = self.get_values(par_names, par_means)
         self.sigma_values = self.get_values(par_names, par_sigmas)
 
+        self.param_outDir = param_outDir
         self.save_throughputs_dir = save_throughputs_dir
+        self.param_outName = param_outName
+
+        if self.param_outDir != '':
+            from sn_tools.sn_io import checkDir
+            checkDir(self.param_outDir)
 
         if self.save_throughputs_dir != '':
             from sn_tools.sn_io import checkDir
@@ -102,6 +115,11 @@ class Sigma_zp_meanwave:
         idx &= param_values['ozone'] >= 0.
         idx &= param_values['aerosol'] >= 0.
         param_values = param_values[idx]
+
+        if self.param_outDir != '':
+            fName = '{}/{}.hdf5'.format(self.param_outDir, self.param_outName)
+            param_values.to_hdf(fName, key='params')
+
         params = {}
 
         params['throughput'] = self.throughput
