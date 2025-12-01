@@ -17,7 +17,7 @@ class Sigma_zp_meanwave:
                  par_means=[1.2, 4.0, 300., 0.05, 0.05],
                  par_sigmas=[0.01, 0.2, 10., 0.0, 0.001],
                  save_throughputs_dir='',
-                 param_outDir='', param_outName=''):
+                 param_outDir='None', param_outName=''):
         """
         class to estimate sigma_zp and sigma_lambdabar 
         according to atmospheric parameters variation
@@ -61,7 +61,7 @@ class Sigma_zp_meanwave:
         self.save_throughputs_dir = save_throughputs_dir
         self.param_outName = param_outName
 
-        if self.param_outDir != '':
+        if self.param_outDir != 'None':
             from sn_tools.sn_io import checkDir
             checkDir(self.param_outDir)
 
@@ -121,7 +121,7 @@ class Sigma_zp_meanwave:
 
         param_values = param_values[idx]
 
-        if self.param_outDir != '':
+        if self.param_outDir != 'None':
             fName = '{}/{}.hdf5'.format(self.param_outDir, self.param_outName)
             param_values.to_hdf(fName, key='params')
 
