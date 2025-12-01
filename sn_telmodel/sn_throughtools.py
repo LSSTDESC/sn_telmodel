@@ -111,9 +111,14 @@ class Sigma_zp_meanwave:
         param_values = self.get_random_values(ntrials)
 
         idx = param_values['airmass'] >= 1
+        idx &= param_values['airmass'] <= 2.9
         idx &= param_values['pwv'] >= 0.
+        idx &= param_values['pwv'] < 25.
         idx &= param_values['ozone'] >= 0.
+        idx &= param_values['ozone'] < 600.
         idx &= param_values['aerosol'] >= 0.
+        idx &= param_values['aerosol'] <= 0.5
+
         param_values = param_values[idx]
 
         if self.param_outDir != '':
