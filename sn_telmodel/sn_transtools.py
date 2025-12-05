@@ -8,6 +8,7 @@ Created on Tue Sep 17 16:24:45 2024
 
 import numpy as np
 import pandas as pd
+from random import gauss
 
 
 def get_trans(am, pwv, oz, tau=0., beta=1.4,
@@ -30,7 +31,7 @@ def get_trans(am, pwv, oz, tau=0., beta=1.4,
        the angstrom exponent. Must be positive in the range 0., 3.
        The default is 1.4.
     colname : list(str), optional
-        list of output columns. 
+        list of output columns.
         The default is ['Wavelength(nm)', 'Throughput(0-1)'].
 
     Returns
@@ -214,3 +215,275 @@ class Zeropoint_airmass:
         fitdata = self.fit(data)
 
         return fitdata
+
+
+class Zeropoint_sigma_airmass:
+    def __init__(self, throughputs, pwv=5.0, ozone=400.,
+                 aerosol=0.05,
+                 sigma_pwv=0.002,
+                 sigma_ozone=30,
+                 sigma_aerosol=0.005,
+                 sigma_airmass=0.0001,
+                 exptime=30., nexp=1, ntrial=20):
+        """
+        class to estimate zp,sigma zp vs airmass
+
+        Parameters
+        ----------
+        throughputs: Throughputs class
+          instance of a throughput class
+        pwv : float, optional
+            pwv value. The default is 4.0.
+        ozone :float, optional
+            ozone value. The default is 400..
+        aerosol : float, optional
+            aerosol value. The default is 0.0.
+        sigma_pwv : float, optional
+            sigma_pwv. The default is 0.002.
+        sigma_ozone : float, optional
+            sigma ozone. The default is 30.
+        sigma_aerosol : float, optional
+            sigma aerosol. The default is 0.005.
+        sigma_airmass: float, optional
+            sigma airmass. The default is 0.0001.
+        exptime: float, optional.
+            exposure time [s]. the default is 30.
+        nexp: float, optional
+            number of exposure. The default is 1.
+        ntrial : int, optional
+            number of trials to estimate impact of sigmas. The default is 20.
+        Returns
+        -------
+        None.
+
+        """
+
+        self.throughputs = throughputs
+        self.pwv = pwv
+        self.ozone = ozone
+        self.aerosol = aerosol
+        self.sigma_pwv = sigma_pwv
+        self.sigma_ozone = sigma_ozone
+        self.sigma_aerosol = sigma_aerosol
+        self.sigma_airmass = sigma_airmass
+        self.exptime = exptime
+        self.nexp = nexp
+        self.ntrial = ntrial
+
+    def get_data(self):
+        """
+        Method to estimate zp, sigma_zp, mean_wave,sigma_mean_wave vs airmass
+
+        Returns
+        -------
+        dict
+            dict of interpolators.
+
+        """
+
+        from sn_tools.sn_utils import multiproc
+        params = {}
+        airmass = np.arange(1., 2.81, 0.1).tolist()
+
+        import time
+        time_ref = time.time()
+        df = multiproc(airmass, params, self.get_param_loop, nproc=8)
+
+        print('zeropoint+sigmas', time.time()-time_ref)
+
+        """
+        print(df)
+
+        # cross check
+        self.sigma_aerosol = 0
+        self.sigma_pwv = 0
+        self.sigma_ozone = 0.
+        self.sigma_airmass = 0
+        self.ntrial = 1
+
+        dfi = self.get_data_indiv()
+
+        print(dfi)
+        print(test)
+        """
+        return self.interpIt(df)
+
+    def interpIt(self, df):
+        """
+        Estimate ID interpolators
+
+        Parameters
+        ----------
+        df : pandas df
+            Data to make interp with.
+
+        Returns
+        -------
+        dd : dict
+            dict of interpolators.
+
+        """
+
+        from scipy.interpolate import interp1d
+
+        dd = {}
+        bands = df['band'].unique()
+        for b in bands:
+            idx = df['band'] == b
+            sel = df[idx]
+            for vv in ['zp', 'sigma_zp', 'mean_wave', 'sigma_mean_wave']:
+                if vv not in dd.keys():
+                    dd[vv] = {}
+                dd[vv][b] = interp1d(sel['airmass'],
+                                     sel[vv],
+                                     bounds_error=False,
+                                     fill_value=0.)
+        return dd
+
+    def get_param_loop(self, vals, params, j=0, output_q=None):
+        """
+         Method to estimate zp,mean_wave
+
+         Parameters
+         ----------
+         vals : list(float)
+             airmass values.
+         params : dict
+             parameters.
+         j : int, optional
+             tag for multiprocessing. The default is 0.
+         output_q : multiprocessing queue, optional
+             where to put the results. The default is None.
+
+         Returns
+         -------
+         TYPE
+             DESCRIPTION.
+
+         """
+
+        r = []
+        # point_to_tag(self.tel_dir, self.tag)
+        tel = self.throughputs
+        df = pd.DataFrame()
+
+        for airmass in vals:
+            dfc = pd.DataFrame()
+
+            for i in range(self.ntrial):
+                dfa = self.get_params(tel, airmass)
+                dfc = pd.concat((dfc, dfa))
+                tel.reset_data
+            dfb = dfc.groupby(['band']).apply(
+                lambda x: self.stat(x)).reset_index()
+            dfb['airmass'] = airmass
+            df = pd.concat((df, dfb))
+
+        if output_q is not None:
+            return output_q.put({j: df})
+        else:
+            return df
+
+    def get_data_indiv(self):
+        """
+        Method to estimate zp vs airmass
+
+        Returns
+        -------
+        res : numpy array
+            columns: filter, zp, airmass, mean_wave.
+
+        """
+
+        r = []
+        # point_to_tag(self.tel_dir, self.tag)
+        tel = self.throughputs
+        df = pd.DataFrame()
+        import time
+        for airmass in np.arange(1., 2.81, 0.1):
+            dfc = pd.DataFrame()
+            time_ref = time.time()
+            for i in range(self.ntrial):
+                dfa = self.get_params(tel, airmass)
+                dfc = pd.concat((dfc, dfa))
+                tel.reset_data
+            dfb = dfc.groupby(['band']).apply(
+                lambda x: self.stat(x)).reset_index()
+            dfb['airmass'] = airmass
+            df = pd.concat((df, dfb))
+            print('done', time.time()-time_ref)
+
+        return df
+
+    def get_params(self, tel, airmass):
+        """
+        Method to estimate zp, deltazp, mean_wave, delta_mean_wave for a given airmass value
+
+        Parameters
+        ----------
+        tel : Throughput instance
+            Throughputs to use.
+        airmass : float
+            airmass value.
+
+        Returns
+        -------
+        res: pandas df
+          output value
+
+        """
+
+        airmass += gauss(0, self.sigma_airmass)
+        aerosol = self.aerosol+gauss(0, self.sigma_aerosol)
+        pwv = self.pwv+gauss(0, self.sigma_pwv)
+        ozone = self.ozone+gauss(0, self.sigma_ozone)
+
+        if airmass < 1:
+            return pd.DataFrame()
+        tel.new_atmosphere(site_name=tel.site_name,
+                           airmass=airmass,
+                           aerosol=aerosol,
+                           pwv=pwv, ozone=ozone)
+        tel.mean_wave()
+        r = []
+        for b in 'ugrizy':
+            # b = 'g'
+            # print(airmass, b, tel.zp(b))
+            mean_wave = tel.mean_wavelength[b]
+            rb = [b]
+            rb.append(tel.zp(b, exptime=self.exptime, nexp=self.nexp))
+            rb.append(tel.counts_zp(
+                b, exptime=self.exptime, nexp=self.nexp))
+            rb.append(mean_wave)
+            r.append(rb)
+        tel.reset_data()
+
+        res = pd.DataFrame(
+            r, columns=['band', 'zp', 'zp_e_sec', 'mean_wave'])
+
+        return res
+
+    def stat(self, grp):
+        """
+        Method to estimate mean and rmses
+
+        Parameters
+        ----------
+        grp : pandas df
+            Data to process.
+
+        Returns
+        -------
+        res : pandas df
+            Mean dn rms.
+
+        """
+
+        dd = {}
+        for vv in ['zp', 'mean_wave']:
+            dd[vv] = [grp[vv].mean()]
+            dd['sigma_{}'.format(vv)] = [grp[vv].std()]
+
+        res = pd.DataFrame.from_dict(dd)
+
+        return res
