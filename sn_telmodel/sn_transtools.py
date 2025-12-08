@@ -331,6 +331,7 @@ class Zeropoint_sigma_airmass:
         for b in bands:
             idx = df['band'] == b
             sel = df[idx]
+
             for vv in ['zp', 'sigma_zp', 'mean_wave', 'sigma_mean_wave']:
                 if vv not in dd.keys():
                     dd[vv] = {}
@@ -482,7 +483,10 @@ class Zeropoint_sigma_airmass:
         dd = {}
         for vv in ['zp', 'mean_wave']:
             dd[vv] = [grp[vv].mean()]
-            dd['sigma_{}'.format(vv)] = [grp[vv].std()]
+            grp_std = 0.
+            if len(grp) > 1:
+                grp_std = grp[vv].std()
+            dd['sigma_{}'.format(vv)] = [grp_std]
 
         res = pd.DataFrame.from_dict(dd)
 
