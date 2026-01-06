@@ -218,57 +218,44 @@ class Zeropoint_airmass:
 
 
 class Zeropoint_sigma_airmass:
-    def __init__(self, throughputs, pwv=5.0, ozone=400.,
-                 aerosol=0.05,
-                 sigma_pwv=0.002,
-                 sigma_ozone=30,
-                 sigma_aerosol=0.005,
-                 sigma_airmass=0.0001,
-                 exptime=30., nexp=1, ntrial=20):
+    def __init__(self, config, exptime=30., nexp=1):
         """
         class to estimate zp,sigma zp vs airmass
 
         Parameters
         ----------
-        throughputs: Throughputs class
-          instance of a throughput class
-        pwv : float, optional
-            pwv value. The default is 4.0.
-        ozone :float, optional
-            ozone value. The default is 400..
-        aerosol : float, optional
-            aerosol value. The default is 0.0.
-        sigma_pwv : float, optional
-            sigma_pwv. The default is 0.002.
-        sigma_ozone : float, optional
-            sigma ozone. The default is 30.
-        sigma_aerosol : float, optional
-            sigma aerosol. The default is 0.005.
-        sigma_airmass: float, optional
-            sigma airmass. The default is 0.0001.
+        config: dict
+          config file for throughput params
         exptime: float, optional.
             exposure time [s]. the default is 30.
         nexp: float, optional
             number of exposure. The default is 1.
-        ntrial : int, optional
-            number of trials to estimate impact of sigmas. The default is 20.
         Returns
         -------
         None.
 
         """
+        from sn_telmodel.sn_throughputs import load_throughputs_from_config
+        self.throughputs = load_throughputs_from_config(config)
+        self.ntrial = config['ntrial']['zp']
+        # airmass parameters
+        self.airmass = config['airmass']
+        self.sigma_airmass = config['sigma']['airmass']
+        # airmass_round = config['round']['airmass']
+        # pwv parameters
+        self.pwv = config['pwv']
+        self.sigma_pwv = config['sigma']['pwv']
+        # pwv_round = config['round']['pwv']
+        # ozone parameters
+        self.ozone = config['ozone']
+        self.sigma_ozone = config['sigma']['ozone']
+        # ozone_round = config['round']['ozone']
+        # aerosol parameters
+        self.aerosol = config['aerosol']
+        self.sigma_aerosol = config['sigma']['aerosol']
 
-        self.throughputs = throughputs
-        self.pwv = pwv
-        self.ozone = ozone
-        self.aerosol = aerosol
-        self.sigma_pwv = sigma_pwv
-        self.sigma_ozone = sigma_ozone
-        self.sigma_aerosol = sigma_aerosol
-        self.sigma_airmass = sigma_airmass
         self.exptime = exptime
         self.nexp = nexp
-        self.ntrial = ntrial
 
     def get_data(self):
         """
@@ -491,3 +478,22 @@ class Zeropoint_sigma_airmass:
         res = pd.DataFrame.from_dict(dd)
 
         return res
+
+
+def zp_from_config(config_instr):
+    """
+    Parameters
+    ----------
+    config_instr : dict
+        config parameters.
+
+    Returns
+    -------
+    interp
+        zp vs airmass per band.
+
+    """
+
+    zp = Zeropoint_sigma_airmass(config_instr)
+
+    return zp.get_data()
