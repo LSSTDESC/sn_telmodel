@@ -270,7 +270,7 @@ class Zeropoint_sigma_airmass:
 
         from sn_tools.sn_utils import multiproc
         params = {}
-        airmass = np.arange(1., 2.81, 0.1).tolist()
+        airmass = np.arange(1., 2.7, 0.1).tolist()
 
         import time
         time_ref = time.time()
