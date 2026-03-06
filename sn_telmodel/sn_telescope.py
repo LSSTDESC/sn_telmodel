@@ -81,6 +81,8 @@ class Telescope:
         flist = ''
         for fi in self.tel_filter_files:
             f = fi.split('.dat')[0].split('_')[-1]
+            if f not in 'ugrizy':
+                f = f[-1]
             flist += f
 
         return flist
