@@ -363,7 +363,7 @@ class Zeropoint_sigma_airmass:
                 dfc = pd.concat((dfc, dfa))
                 tel.reset_data
             dfb = dfc.groupby(['band']).apply(
-                lambda x: self.stat(x)).reset_index()
+                lambda x: self.stat(x),include_groups=False).reset_index()
             dfb['airmass'] = airmass
             df = pd.concat((df, dfb))
 
