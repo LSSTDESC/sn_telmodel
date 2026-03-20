@@ -128,8 +128,11 @@ class Sigma_zp_meanwave:
         params = {}
 
         params['throughput'] = self.throughput
+        import time
+        time_ref = time.time()
         zp_meanwave = multiproc(param_values, params, self.zp_meanwave, nproc)
 
+        print('processed',time.time()-time_ref)
         # print('jjj', zp_meanwave.columns)
 
         cols = zp_meanwave.columns
@@ -260,11 +263,16 @@ class Sigma_zp_meanwave:
         throughput = params['throughput']
         zp_dict = {}
         bands = list('ugrizy')
-        zp_dict = dict(zip(bands, [[], [], [], [], [], []]))
-        mean_wave_dict = dict(zip(bands, [[], [], [], [], [], []]))
+        #zp_dict = dict(zip(bands, [[], [], [], [], [], []]))
+        #mean_wave_dict = dict(zip(bands, [[], [], [], [], [], []]))
 
         df_throughputs = pd.DataFrame()
+        print('processing',j,len(data))
+        import time
+        time_ref = time.time()
+        res = pd.DataFrame()
         for i, row in data.iterrows():
+            time_refb = time.time()
             throughput.reset_data()
             throughput.new_atmosphere(airmass=row['airmass'],
                                       aerosol=row['aerosol'],
@@ -275,18 +283,38 @@ class Sigma_zp_meanwave:
                 df_throughputs = pd.concat((df_throughputs,
                                             self.get_throughputs(throughput, i, j)))
             throughput.mean_wave()
-            for b in 'ugrizy':
+            print('there man',time.time()-time_refb)
+            time_refc = time.time()
+            r = []
+            cols = []
+            for b in 'grizy':
                 # mean_wave = tel.mean_wavelength[b]
-                zpb = throughput.zp(b, exptime=30, nexp=1)
-                zp_dict[b].append(zpb)
-                mean_wave_dict[b].append(throughput.mean_wavelength[b])
-
+                zpb = throughput.get_zp(b, exptime=30, nexp=1)
+                #zpb = 0
+                mean_wave=0
+                #mean_wave = throughput.mean_wavelength[b]
+                #zp_dict[b].append(zpb)
+                #mean_wave_dict[b].append(throughput.mean_wavelength[b])
+                r+= [zpb,mean_wave]
+                cols += ['zp_{}'.format(b),'mean_wave_{}'.format(b)]
+            print('there man',time.time()-time_refc)
+            df = pd.DataFrame([r],columns=cols)
+            
+            res = pd.concat((res,df))
+            #print(zp_dict)
+            #print('booking star',time.time()-time_ref)
+        #print('there man',time.time()-time_ref)
+        """
         res_zp = pd.DataFrame.from_dict(zp_dict)
+        print(res_zp)
         res_zp.columns = 'zp_' + res_zp.columns
         res_meanwave = pd.DataFrame.from_dict(mean_wave_dict)
         res_meanwave.columns = 'mean_wave_' + res_meanwave.columns
         res = pd.concat((res_zp, res_meanwave), axis=1)
-
+        print(res)
+        print(res_new)
+        print(test)
+        """
         if self.save_throughputs_dir != '':
             outName = '{}/throughputs_{}.hdf5'.format(
                 self.save_throughputs_dir, j)
