@@ -128,11 +128,9 @@ class Sigma_zp_meanwave:
         params = {}
 
         params['throughput'] = self.throughput
-        import time
-        time_ref = time.time()
+        
         zp_meanwave = multiproc(param_values, params, self.zp_meanwave, nproc)
 
-        print('processed',time.time()-time_ref)
         # print('jjj', zp_meanwave.columns)
 
         cols = zp_meanwave.columns
@@ -267,12 +265,10 @@ class Sigma_zp_meanwave:
         #mean_wave_dict = dict(zip(bands, [[], [], [], [], [], []]))
 
         df_throughputs = pd.DataFrame()
-        print('processing',j,len(data))
-        import time
-        time_ref = time.time()
         res = pd.DataFrame()
+        
         for i, row in data.iterrows():
-            time_refb = time.time()
+            
             throughput.reset_data()
             throughput.new_atmosphere(airmass=row['airmass'],
                                       aerosol=row['aerosol'],
@@ -283,13 +279,13 @@ class Sigma_zp_meanwave:
                 df_throughputs = pd.concat((df_throughputs,
                                             self.get_throughputs(throughput, i, j)))
             throughput.mean_wave()
-            print('there man',time.time()-time_refb)
-            time_refc = time.time()
+            
             r = []
             cols = []
             for b in 'grizy':
                 # mean_wave = tel.mean_wavelength[b]
-                zpb = throughput.get_zp(b, exptime=30, nexp=1)
+                #zpb = throughput.get_zp(b, exptime=30, nexp=1)
+                zpb = throughput.zp(b, exptime=30, nexp=1)
                 #zpb = 0
                 mean_wave=0
                 #mean_wave = throughput.mean_wavelength[b]
@@ -297,7 +293,7 @@ class Sigma_zp_meanwave:
                 #mean_wave_dict[b].append(throughput.mean_wavelength[b])
                 r+= [zpb,mean_wave]
                 cols += ['zp_{}'.format(b),'mean_wave_{}'.format(b)]
-            print('there man',time.time()-time_refc)
+            #print('there man',time.time()-time_refc)
             df = pd.DataFrame([r],columns=cols)
             
             res = pd.concat((res,df))
