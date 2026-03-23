@@ -435,8 +435,8 @@ class Throughputs(Telescope, Atmos_Transmission):
         tt = np.log10(myup/(3631.*self.Sigmab(band)))
         self.data['mag_sky'][band] = -2.5 * tt
 
-    #@get_val_decorb
-    def get_zp(self, band,exptime,nexp):
+    @get_val_decorb
+    def get_zp(self, what, band,exptime,nexp):
         """
         decorator get zero points
         formula used here are extracted from LSE-40
@@ -571,10 +571,7 @@ class Throughputs(Telescope, Atmos_Transmission):
           filter
 
         """
-        vv = 'count_zp'
-        if (vv not in self.data.keys()) or (filtre not in self.data[vv].keys()):
-            self.get_zp(filtre,exptime,nexp)
-        #self.get_zp('zp', filtre,exptime,nexp)
+        self.get_zp('zp', filtre,exptime,nexp)
         return self.return_value('zp', filtre)
 
     def counts_zp(self, filtre,exptime,nexp):
