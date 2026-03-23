@@ -50,7 +50,7 @@ class Throughputs(Telescope, Atmos_Transmission):
                  atmos_dir='throughputs_1.9/atmos',
                  atmos_type='obsatmo',
                  darksky_file='throughputs_1.9/baseline/darksky.dat',
-                 gain=2.5):
+                 gain=2.5,opti=True):
         """
         Throughputs class - inheritance from Telescope and Atmos_Transmission
 
@@ -89,6 +89,8 @@ class Throughputs(Telescope, Atmos_Transmission):
             dark sky file. The default is 'throughputs_1.9/baseline/darksky.dat'
         gain: float, optional
             electronic gain. The default is 2.5.
+        opti: bool, optional.
+           to get an optimal (computing time) estimation of the throughput values
 
         Returns
         -------
@@ -115,9 +117,18 @@ class Throughputs(Telescope, Atmos_Transmission):
 
         # throughgputs data
         self.data = {}
-        self.params = ['mag_sky', 'm5', 'Tb',
-                       'Sigmab', 'zp', 'counts_zp', 'adu_zp',
-                       'Skyb', 'flux_sky']
+        
+        self.opti = opti
+        
+        if not self.opti:
+            self.params = ['mag_sky', 'm5', 'Tb',
+                           'Sigmab', 'zp', 'counts_zp', 'adu_zp',
+                           'Skyb', 'flux_sky']
+        else:   
+            self.params = ['m5', 'Tb',
+                           'zp', 'counts_zp', 'adu_zp',
+                           'Skyb', 'flux_sky']
+        
         self.reset_data()
 
         # electronic gain
@@ -129,6 +140,14 @@ class Throughputs(Telescope, Atmos_Transmission):
 
         # mean wavelength filters
         self.mean_wavelength = {}
+        
+        #sigmab and magsky
+        if self.opti:
+            self.data['mag_sky'] = {}
+            self.data['Sigmab'] = {}
+            for b in 'ugrizy':
+                self.get_Sigmab_mag_sky(b)
+        
 
     def reset_data(self):
         """
@@ -332,6 +351,27 @@ class Throughputs(Telescope, Atmos_Transmission):
         fig.suptitle('Dark Sky SED')
         ax.grid(visible=True)
 
+    def get_Sigmab_mag_sky(self,band):
+        """
+        Function to estimate Tb and magsky
+        dependent on telescope transmission only
+
+        Parameters
+        ----------
+        band : str
+            Band to consider.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        myup = self.Calc_Integ_Sed(self.darksky, self.tel_trans[band])
+        self.data['Sigmab'][band] = self.Calc_Integ(self.tel_trans[band])
+        tt = np.log10(myup/(3631.*self.data['Sigmab'][band]))
+        self.data['mag_sky'][band] = -2.5 * tt
+
     @get_val_decorb
     def get(self, what, band, exptime, nexp):
         """
@@ -425,16 +465,22 @@ class Throughputs(Telescope, Atmos_Transmission):
 
         """
 
-        myup = self.Calc_Integ_Sed(self.darksky, self.tel_trans[band])
+        
 
         # bpass = self.atmosphere[band]
         # if self.aerosol_b:
         bpass = self.throughputs[band]
         self.data['Tb'][band] = self.Calc_Integ(bpass)
+        
+        if not self.opti:
+            self.get_Sigmab_mag_sky(band)
+            
+        """
+        myup = self.Calc_Integ_Sed(self.darksky, self.tel_trans[band])
         self.data['Sigmab'][band] = self.Calc_Integ(self.tel_trans[band])
         tt = np.log10(myup/(3631.*self.Sigmab(band)))
         self.data['mag_sky'][band] = -2.5 * tt
-
+        """
     @get_val_decorb
     def get_zp(self, what, band,exptime,nexp):
         """
