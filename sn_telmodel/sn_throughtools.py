@@ -111,7 +111,7 @@ class Sigma_zp_meanwave:
         param_values = self.get_random_values(ntrials)
 
         idx = param_values['airmass'] >= 1
-        idx &= param_values['airmass'] <= 2.9
+        idx &= param_values['airmass'] <= 2.7
         idx &= param_values['pwv'] >= 0.
         idx &= param_values['pwv'] < 25.
         idx &= param_values['ozone'] >= 0.
@@ -120,6 +120,9 @@ class Sigma_zp_meanwave:
         idx &= param_values['aerosol'] <= 0.5
 
         param_values = param_values[idx]
+
+        if len(param_values) == 0:
+            return pd.DataFrame()
 
         if self.param_outDir != 'None':
             fName = '{}/{}.hdf5'.format(self.param_outDir, self.param_outName)
@@ -287,8 +290,8 @@ class Sigma_zp_meanwave:
                 #zpb = throughput.get_zp(b, exptime=30, nexp=1)
                 zpb = throughput.zp(b, exptime=30, nexp=1)
                 #zpb = 0
-                mean_wave=0
-                #mean_wave = throughput.mean_wavelength[b]
+                #mean_wave=0
+                mean_wave = throughput.mean_wavelength[b]
                 #zp_dict[b].append(zpb)
                 #mean_wave_dict[b].append(throughput.mean_wavelength[b])
                 r+= [zpb,mean_wave]
