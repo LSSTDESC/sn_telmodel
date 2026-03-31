@@ -9,7 +9,7 @@ from sn_telmodel.sn_throughputs import Throughputs
 from sn_tools.sn_utils import multiproc
 import pandas as pd
 import numpy as np
-
+from scipy import stats
 
 class Sigma_zp_meanwave:
     def __init__(self, through_dir, site_name='LSST', pressure=743.,
@@ -17,7 +17,8 @@ class Sigma_zp_meanwave:
                  par_means=[1.2, 4.0, 300., 0.05, 0.05],
                  par_sigmas=[0.01, 0.2, 10., 0.0, 0.001],
                  save_throughputs_dir='',
-                 param_outDir='None', param_outName=''):
+                 param_outDir='None', param_outName='',
+                 save_random_dir=''):
         """
         class to estimate sigma_zp and sigma_lambdabar 
         according to atmospheric parameters variation
@@ -38,11 +39,13 @@ class Sigma_zp_meanwave:
         par_sigmas : list(float), optional
             parameters sigmas. The default is [0.01, 0.2, 10., 0.0, 0.001].
         save_throughputs_dir: str, optional
-           dir where to save throughputs
+           dir where to save throughputs. The default is ''
         param_outDir: str, optional
            params output dir name. The default is ''
         param_outName: str, optional
            params output file name. The default is ''
+        save_random_dir: str, optional
+           dir where to save the random trials. The default is ''.
 
         Returns
         -------
@@ -60,6 +63,7 @@ class Sigma_zp_meanwave:
         self.param_outDir = param_outDir
         self.save_throughputs_dir = save_throughputs_dir
         self.param_outName = param_outName
+        self.save_random_dir = save_random_dir
 
         if self.param_outDir != 'None':
             from sn_tools.sn_io import checkDir
@@ -68,6 +72,10 @@ class Sigma_zp_meanwave:
         if self.save_throughputs_dir != '':
             from sn_tools.sn_io import checkDir
             checkDir(self.save_throughputs_dir)
+            
+        if self.save_random_dir != '':
+            from sn_tools.sn_io import checkDir
+            checkDir(self.save_random_dir)
 
     def get_values(self, names, values):
         """
@@ -134,6 +142,12 @@ class Sigma_zp_meanwave:
         
         zp_meanwave = multiproc(param_values, params, self.zp_meanwave, nproc)
 
+        if self.save_random_dir != '':
+            outName = '{}/combi1.hdf5'.format(self.save_random_dir)
+            zp_meanwave.to_hdf(outName,key='data')
+            
+            
+
         # print('jjj', zp_meanwave.columns)
 
         cols = zp_meanwave.columns
@@ -142,9 +156,10 @@ class Sigma_zp_meanwave:
         for col in cols:
             means = zp_meanwave[col].mean()
             stds = zp_meanwave[col].std()
+            mad_std = stats.median_abs_deviation(zp_meanwave[col])
             fi_vals['mean_{}'.format(col)] = [means]
             fi_vals['std_{}'.format(col)] = [stds]
-
+            fi_vals['mad_{}'.format(col)] = [mad_std]
         """
         vv = zp_values.mean().to_list()
         cols = zp_values.columns.to_list()
