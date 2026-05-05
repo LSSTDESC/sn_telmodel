@@ -270,7 +270,7 @@ class Zeropoint_sigma_airmass:
 
         from sn_tools.sn_utils import multiproc
         params = {}
-        airmass = np.arange(1., 2.7, 0.1).tolist()
+        airmass = np.arange(1., 2.5, 0.1).tolist()
 
         import time
         time_ref = time.time()
@@ -360,6 +360,7 @@ class Zeropoint_sigma_airmass:
 
             for i in range(self.ntrial):
                 dfa = self.get_params(tel, airmass)
+                #print(dfa)
                 dfc = pd.concat((dfc, dfa))
                 tel.reset_data
             dfb = dfc.groupby(['band']).apply(
