@@ -10,12 +10,14 @@ from sn_tools.sn_utils import multiproc
 import pandas as pd
 import numpy as np
 from scipy import stats
+import copy
 
 class Sigma_zp_meanwave:
     def __init__(self, through_dir, site_name='LSST', pressure=743.,
                  par_names=['airmass', 'pwv', 'ozone', 'beta', 'aerosol'],
                  par_means=[1.2, 4.0, 300., 0.05, 0.05],
                  par_sigmas=[0.01, 0.2, 10., 0.0, 0.001],
+                 par_bias=[0.0]*5,
                  save_throughputs_dir='',
                  param_outDir='None', param_outName='',
                  save_random_dir=''):
@@ -38,6 +40,8 @@ class Sigma_zp_meanwave:
             parameter means. The default is [1.2, 4.0, 300., 0.05, 0.05].
         par_sigmas : list(float), optional
             parameters sigmas. The default is [0.01, 0.2, 10., 0.0, 0.001].
+        par_bias: list(float), optional
+            bias parameters. The default is [0.0]*5
         save_throughputs_dir: str, optional
            dir where to save throughputs. The default is ''
         param_outDir: str, optional
@@ -59,7 +63,10 @@ class Sigma_zp_meanwave:
 
         self.mean_values = self.get_values(par_names, par_means)
         self.sigma_values = self.get_values(par_names, par_sigmas)
+        self.bias_values = self.get_values(par_names, par_bias)
 
+        self.orig_values = copy.deepcopy(self.mean_values)
+        
         self.param_outDir = param_outDir
         self.save_throughputs_dir = save_throughputs_dir
         self.param_outName = param_outName
@@ -140,7 +147,11 @@ class Sigma_zp_meanwave:
 
         params['throughput'] = self.throughput
         
-        zp_meanwave = multiproc(param_values, params, self.zp_meanwave, nproc)
+        if ntrials == 1:
+            zp_meanwave =  self.zp_meanwave(param_values,params)          
+        else:
+            zp_meanwave = multiproc(param_values, params, 
+                                    self.zp_meanwave, nproc)
 
         if self.save_random_dir != '':
             outName = '{}/combi1.hdf5'.format(self.save_random_dir)
@@ -173,7 +184,9 @@ class Sigma_zp_meanwave:
         # add atmospheric parameters
         df = self.concat(df, self.mean_values, 'mean')
         df = self.concat(df, self.sigma_values, 'sigma')
-
+        df = self.concat(df, self.bias_values, 'bias')
+        df = self.concat(df, self.orig_values, 'orig')
+        
         return df
 
     def concat(self, dfa, thedict, prefix):
@@ -248,6 +261,10 @@ class Sigma_zp_meanwave:
             for key, vals in self.mean_values.items():
                 sigma = self.sigma_values[key]
                 vv = vals+np.random.normal(0., sigma)
+                #print('before',key,vv,self.bias_values[key])
+                #add bias here
+                vv *= (1.+self.bias_values[key])
+                #print('afetr',vv)
                 rnd[key].append(vv)
 
         res = pd.DataFrame.from_dict(rnd)
@@ -285,6 +302,8 @@ class Sigma_zp_meanwave:
         df_throughputs = pd.DataFrame()
         res = pd.DataFrame()
         
+        cols_atm = ['airmass','aerosol','pwv','ozone','beta']
+        
         for i, row in data.iterrows():
             
             throughput.reset_data()
@@ -311,6 +330,11 @@ class Sigma_zp_meanwave:
                 #mean_wave_dict[b].append(throughput.mean_wavelength[b])
                 r+= [zpb,mean_wave]
                 cols += ['zp_{}'.format(b),'mean_wave_{}'.format(b)]
+                
+            for cc in cols_atm:
+                r += [row[cc]]
+                cols += ['real_{}'.format(cc)]
+                
             #print('there man',time.time()-time_refc)
             df = pd.DataFrame([r],columns=cols)
             
