@@ -126,7 +126,7 @@ class Sigma_zp_meanwave:
         param_values = self.get_random_values(ntrials)
 
         idx = param_values['airmass'] >= 1
-        idx &= param_values['airmass'] <= 2.7
+        idx &= param_values['airmass'] <= 2.5
         idx &= param_values['pwv'] >= 0.
         idx &= param_values['pwv'] < 25.
         idx &= param_values['ozone'] >= 0.
@@ -153,7 +153,7 @@ class Sigma_zp_meanwave:
             zp_meanwave = multiproc(param_values, params, 
                                     self.zp_meanwave, nproc)
 
-        if self.save_random_dir != '':
+        if self.save_random_dir != 'None':
             outName = '{}/combi1.hdf5'.format(self.save_random_dir)
             zp_meanwave.to_hdf(outName,key='data')
             
@@ -364,6 +364,24 @@ class Sigma_zp_meanwave:
             return res
 
     def get_throughputs(self, throughput, ia, ib):
+        """
+        Method to get the throughputs
+
+        Parameters
+        ----------
+        throughput : Throughput
+            Throughput instance.
+        ia : int
+            icombi a.
+        ib : int
+            icombi b.
+
+        Returns
+        -------
+        df_combi : pandas df
+            result.
+
+        """
 
         df_combi = pd.DataFrame()
         for b in 'ugrizy':
