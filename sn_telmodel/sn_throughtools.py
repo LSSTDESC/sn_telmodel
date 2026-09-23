@@ -84,6 +84,18 @@ class Sigma_zp_meanwave:
             from sn_tools.sn_io import checkDir
             checkDir(self.save_random_dir)
 
+        #prepare list for delta_zp measurements
+        
+        ro = []
+        for ba in 'grizy':
+            for bb in 'grizy':
+                if ba != bb:
+                    ro.append(''.join(sorted(ba+bb)))
+        
+        self.list_filter_combi = set(ro)
+        
+
+
     def get_values(self, names, values):
         """
         Method to transform two lists to a dict
@@ -147,7 +159,7 @@ class Sigma_zp_meanwave:
 
         params['throughput'] = self.throughput
         
-        if ntrials == 1:
+        if nproc == 1:
             zp_meanwave =  self.zp_meanwave(param_values,params)          
         else:
             zp_meanwave = multiproc(param_values, params, 
@@ -162,6 +174,7 @@ class Sigma_zp_meanwave:
         # print('jjj', zp_meanwave.columns)
 
         cols = zp_meanwave.columns
+        
         fi_vals = {}
 
         for col in cols:
@@ -171,6 +184,16 @@ class Sigma_zp_meanwave:
             fi_vals['mean_{}'.format(col)] = [means]
             fi_vals['std_{}'.format(col)] = [stds]
             fi_vals['mad_{}'.format(col)] = [mad_std]
+        #estimates std(delta_zp) between bands
+        
+        for vv in self.list_filter_combi:
+            ba=vv[0]
+            bb=vv[1]
+            vba = 'zp_{}'.format(ba)
+            vbb = 'zp_{}'.format(bb)
+            diff = (zp_meanwave[vba]-zp_meanwave[vbb]).std()
+            fi_vals['std_zp_{}'.format(vv)] = [diff]
+        
         """
         vv = zp_values.mean().to_list()
         cols = zp_values.columns.to_list()
