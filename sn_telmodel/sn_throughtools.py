@@ -85,7 +85,7 @@ class Sigma_zp_meanwave:
             checkDir(self.save_random_dir)
 
         #prepare list for delta_zp measurements
-        
+        """
         ro = []
         for ba in 'grizy':
             for bb in 'grizy':
@@ -93,8 +93,9 @@ class Sigma_zp_meanwave:
                     ro.append(''.join(sorted(ba+bb)))
         
         self.list_filter_combi = set(ro)
+        """    
         
-
+        self.list_filter_combi = ['gr','ri','iz','zy']
 
     def get_values(self, names, values):
         """
@@ -135,7 +136,7 @@ class Sigma_zp_meanwave:
         """
 
         # get random values
-        param_values = self.get_random_values(ntrials)
+        param_values = self.get_random_values()
 
         idx = param_values['airmass'] >= 1
         idx &= param_values['airmass'] <= 2.5
@@ -160,19 +161,17 @@ class Sigma_zp_meanwave:
         params['throughput'] = self.throughput
         
         if nproc == 1:
-            zp_meanwave_flat =  self.zp_meanwave(param_values,params)          
+            zp_meanwave=  self.zp_meanwave(param_values,params)          
         else:
-            zp_meanwave_flat = multiproc(param_values, params, 
+            zp_meanwave= multiproc(param_values, params, 
                                     self.zp_meanwave, nproc)
 
         if self.save_random_dir != 'None':
             outName = '{}/combi1.hdf5'.format(self.save_random_dir)
-            weights= zp_meanwave_flat['weight'].to_list()
-            df_rand = zp_meanwave_flat.sample(ntrials,weights=weights,replace=True)
+            weights= zp_meanwave['weight'].to_list()
+            df_rand = zp_meanwave.sample(ntrials,
+                                              weights=weights,replace=True)
             df_rand.to_hdf(outName,key='data')
-            
-        zp_meanwave=pd.DataFrame(zp_meanwave_flat)
-        # print('jjj', zp_meanwave.columns)
 
         for vv in self.list_filter_combi:
             ba=vv[0]
@@ -187,7 +186,7 @@ class Sigma_zp_meanwave:
 
         for col in cols:
             means = zp_meanwave[col].mean()
-            stds = zp_meanwave[col].std()
+            #stds = zp_meanwave[col].std()
             stds_v = np.sqrt(np.cov(zp_meanwave[col], 
                                    aweights=zp_meanwave['weight']))
             mad_std = stats.median_abs_deviation(zp_meanwave[col])
@@ -298,7 +297,7 @@ class Sigma_zp_meanwave:
 
         return res
 
-    def get_random_values(self,nsample=100,nsigmas=3):
+    def get_random_values(self,nsample=50,nsigmas=3):
         """
         Method to estimate random values for atmospheric parameters
 
@@ -329,8 +328,12 @@ class Sigma_zp_meanwave:
             
             else:
                 values = [the_mean]
+            
 
             df= pd.DataFrame(values,columns=[key])
+            #add bias here
+            df[key] *= (1.+self.bias_values[key])
+            
             wstr = 'weight_{}'.format(key)
             if the_sigma > 0:
                 df[wstr] = np.exp(-((df[key]-the_mean)**2)/(2.*the_sigma**2))
@@ -352,9 +355,6 @@ class Sigma_zp_meanwave:
         for key in keys:
             res['weight'] *= res['weight_{}'.format(key)]
 
-        #normalize the weight
-        weights=res['weight']/res['weight'].sum()
-        
 
         return res
 
