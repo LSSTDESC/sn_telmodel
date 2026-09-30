@@ -160,18 +160,26 @@ class Sigma_zp_meanwave:
         params['throughput'] = self.throughput
         
         if nproc == 1:
-            zp_meanwave =  self.zp_meanwave(param_values,params)          
+            zp_meanwave_flat =  self.zp_meanwave(param_values,params)          
         else:
-            zp_meanwave = multiproc(param_values, params, 
+            zp_meanwave_flat = multiproc(param_values, params, 
                                     self.zp_meanwave, nproc)
 
         if self.save_random_dir != 'None':
             outName = '{}/combi1.hdf5'.format(self.save_random_dir)
-            zp_meanwave.to_hdf(outName,key='data')
+            weights= zp_meanwave_flat['weight'].to_list()
+            df_rand = zp_meanwave_flat.sample(ntrials,weights=weights,replace=True)
+            df_rand.to_hdf(outName,key='data')
             
-            
-
+        zp_meanwave=pd.DataFrame(zp_meanwave_flat)
         # print('jjj', zp_meanwave.columns)
+
+        for vv in self.list_filter_combi:
+            ba=vv[0]
+            bb=vv[1]
+            vba = 'zp_{}'.format(ba)
+            vbb = 'zp_{}'.format(bb)
+            zp_meanwave['zp_{}'.format(vv)]=zp_meanwave[vba]-zp_meanwave[vbb]
 
         cols = zp_meanwave.columns
         
@@ -180,19 +188,15 @@ class Sigma_zp_meanwave:
         for col in cols:
             means = zp_meanwave[col].mean()
             stds = zp_meanwave[col].std()
+            stds_v = np.sqrt(np.cov(zp_meanwave[col], 
+                                   aweights=zp_meanwave['weight']))
             mad_std = stats.median_abs_deviation(zp_meanwave[col])
             fi_vals['mean_{}'.format(col)] = [means]
-            fi_vals['std_{}'.format(col)] = [stds]
+            fi_vals['std_{}'.format(col)] = [stds_v]
             fi_vals['mad_{}'.format(col)] = [mad_std]
         #estimates std(delta_zp) between bands
         
-        for vv in self.list_filter_combi:
-            ba=vv[0]
-            bb=vv[1]
-            vba = 'zp_{}'.format(ba)
-            vbb = 'zp_{}'.format(bb)
-            diff = (zp_meanwave[vba]-zp_meanwave[vbb]).std()
-            fi_vals['std_zp_{}'.format(vv)] = [diff]
+ 
         
         """
         vv = zp_values.mean().to_list()
@@ -261,7 +265,7 @@ class Sigma_zp_meanwave:
 
         return dfa
 
-    def get_random_values(self, ntrials):
+    def get_random_values_old(self, ntrials):
         """
         Method to estimate random values for atmospheric parameters
 
@@ -293,6 +297,67 @@ class Sigma_zp_meanwave:
         res = pd.DataFrame.from_dict(rnd)
 
         return res
+
+    def get_random_values(self,nsample=100,nsigmas=3):
+        """
+        Method to estimate random values for atmospheric parameters
+
+        Parameters
+        ----------
+        nsample : int, optional
+            number of values between +-nsigmas. The defalut is 100
+        nsigmas: int, optional
+            n sigma for values to be considered. The default is 3.
+
+        Returns
+        -------
+        res : pandas df
+            random values for atmospheric parameters.
+
+        """
+
+        dd = {}
+        for key,vals in self.mean_values.items():
+            the_mean=vals
+            the_sigma = self.sigma_values[key]
+            
+            if the_sigma > 0.:
+                val_min = the_mean-nsigmas*the_sigma
+                val_max = the_mean+nsigmas*the_sigma
+            
+                values=np.linspace(val_min,val_max,nsample)
+            
+            else:
+                values = [the_mean]
+
+            df= pd.DataFrame(values,columns=[key])
+            wstr = 'weight_{}'.format(key)
+            if the_sigma > 0:
+                df[wstr] = np.exp(-((df[key]-the_mean)**2)/(2.*the_sigma**2))
+            else:
+                df[wstr] = 1
+            
+            dd[key] = df
+
+        keys = list(self.mean_values.keys())
+        
+        res = dd[keys[0]]
+        
+        for i in range(len(keys)):
+            if i >=1:
+                res = res.merge(dd[keys[i]],how='cross')
+
+        res['weight'] = 1
+        
+        for key in keys:
+            res['weight'] *= res['weight_{}'.format(key)]
+
+        #normalize the weight
+        weights=res['weight']/res['weight'].sum()
+        
+
+        return res
+
 
     def zp_meanwave(self, data, params, j=0, output_q=None):
         """
@@ -357,6 +422,9 @@ class Sigma_zp_meanwave:
             for cc in cols_atm:
                 r += [row[cc]]
                 cols += ['real_{}'.format(cc)]
+                
+            r += [row['weight']]
+            cols += ['weight']
                 
             #print('there man',time.time()-time_refc)
             df = pd.DataFrame([r],columns=cols)
