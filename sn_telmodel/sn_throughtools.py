@@ -297,7 +297,7 @@ class Sigma_zp_meanwave:
 
         return res
 
-    def get_random_values(self,nsample=50,nsigmas=3):
+    def get_random_values(self,nsample=25,nsigmas=3):
         """
         Method to estimate random values for atmospheric parameters
 
@@ -380,7 +380,6 @@ class Sigma_zp_meanwave:
             zp results for each band.
 
         """
-
         throughput = params['throughput']
         zp_dict = {}
         bands = list('ugrizy')
@@ -392,6 +391,12 @@ class Sigma_zp_meanwave:
         
         cols_atm = ['airmass','aerosol','pwv','ozone','beta']
         
+        data = pd.DataFrame(data).reset_index()
+        
+        ntot = len(data)
+        
+        vvals = [5,20,50,75,100]
+        count = {}
         for i, row in data.iterrows():
             
             throughput.reset_data()
@@ -430,6 +435,16 @@ class Sigma_zp_meanwave:
             df = pd.DataFrame([r],columns=cols)
             
             res = pd.concat((res,df))
+          
+            if j > 0:
+                frac = 100*i/ntot
+                for iio in range(len(vvals)-1):
+                    fmin = vvals[iio]
+                    fmax = vvals[iio+1]
+                    if frac >= fmin and frac<= fmax:
+                        if iio not in count.keys():
+                            print('stat [%]',j,frac)
+                            count[iio] = 1
             #print(zp_dict)
             #print('booking star',time.time()-time_ref)
         #print('there man',time.time()-time_ref)
